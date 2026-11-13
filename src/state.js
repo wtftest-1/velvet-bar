@@ -2,6 +2,7 @@
 import { DEFAULT_LAYOUT, FURNITURE, MENU, CONFIG, STAFF_ROLES } from './data/catalog.js';
 
 const KEY = 'velvetnote.save.v1';
+export const SAVE_KEY = KEY;
 
 export function newState() {
   const items = DEFAULT_LAYOUT.map((d, i) => ({ id: i + 1, k: d.k, f: d.f, x: d.x, z: d.z, r: d.r || 0, m: {}, cost: FURNITURE[d.k].price }));
@@ -12,7 +13,7 @@ export function newState() {
     ledger: [], lid: 0, items, nextId: items.length + 1, pins: [], nextPin: 1,
     staff: Object.fromEntries(Object.keys(STAFF_ROLES).map(k => [k, 0])), bookings: [], events: [], ads: [], invites: [], nid: 1,
     menu: Object.fromEntries(MENU.map(m => [m.id, m.price])), music: { mode: 'generated', vol: 0.7, muted: false },
-    art: null, history: [], lastReport: null, surfaces: {}, dims: { hall: 0, stage: 0 },
+    art: null, history: [], lastReport: null, surfaces: {}, dims: { hall: 0, stage: 0 }, prefs: { invX: false, invY: false },
   };
   post(s, { kind: 'equity', cat: 'capital', desc: 'Opening capital contributed in cash', amount: CONFIG.startCash, cash: CONFIG.startCash });
   post(s, { kind: 'equity', cat: 'capital', desc: 'Opening furniture contributed in kind', amount: assetCost, cash: 0 });
@@ -23,7 +24,7 @@ export function loadState() {
   try {
     const raw = localStorage.getItem(KEY); if (!raw) return null;
     const s = JSON.parse(raw), base = newState();
-    const merged = { ...base, ...s, fin: { ...base.fin, ...s.fin }, staff: { ...base.staff, ...s.staff }, menu: { ...base.menu, ...s.menu }, music: { ...base.music, ...s.music }, surfaces: { ...(s.surfaces || {}) }, dims: { ...base.dims, ...(s.dims || {}) } };
+    const merged = { ...base, ...s, fin: { ...base.fin, ...s.fin }, staff: { ...base.staff, ...s.staff }, menu: { ...base.menu, ...s.menu }, music: { ...base.music, ...s.music }, surfaces: { ...(s.surfaces || {}) }, dims: { ...base.dims, ...(s.dims || {}) }, prefs: { ...base.prefs, ...(s.prefs || {}) } };
     merged.open = false; // a night in progress is not saved
     merged.items = merged.items.filter(i => FURNITURE[i.k]);
     return merged;

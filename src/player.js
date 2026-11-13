@@ -8,14 +8,14 @@ export class Player {
   constructor(camera, dom, world) {
     this.camera = camera; this.dom = dom; this.world = world;
     this.x = 0; this.z = 6.2; this.y = 0; this.yaw = Math.PI; this.pitch = 0; this.floor = 0;
-    this.fly = false; this.flyY = 4; this.keys = new Set(); this.enabled = false; this.dragMode = false; this.dragging = false; this.bob = 0; this.vx = 0; this.vz = 0;
+    this.invX = false; this.invY = false; this.fly = false; this.flyY = 4; this.keys = new Set(); this.enabled = false; this.dragMode = false; this.dragging = false; this.bob = 0; this.vx = 0; this.vz = 0;
     this.onLockChange = () => {}; this.onLockError = () => {};
     camera.rotation.order = 'YXZ';
     const typing = e => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName);
     window.addEventListener('keydown', e => { if (typing(e)) return; this.keys.add(e.code); if (this.enabled && e.code.startsWith('Arrow')) e.preventDefault(); });
     window.addEventListener('keyup', e => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
-    document.addEventListener('mousemove', e => { if (this.enabled && this.locked) this.look(e.movementX, e.movementY); else if (this.enabled && this.dragging) this.look(e.movementX, e.movementY); });
+    document.addEventListener('mousemove', e => { if (this.enabled && this.locked) this.look(e.movementX, e.movementY); else if (this.enabled && this.dragging) this.look(-e.movementX, -e.movementY); });  // click-drag look is "grab the world" style
     dom.addEventListener('pointerdown', e => { if (this.enabled && !this.locked && this.dragMode) { this.dragging = true; dom.setPointerCapture?.(e.pointerId); } });
     window.addEventListener('pointerup', () => { this.dragging = false; });
     document.addEventListener('pointerlockchange', () => this.onLockChange(this.locked));
@@ -27,8 +27,8 @@ export class Player {
     setTimeout(() => { if (this.enabled && !this.locked) { this.dragMode = true; } }, 700);
   }
   unlock() { if (this.locked) document.exitPointerLock(); }
-  look(dx, dy) { this.yaw += dx * 0.0022;  // + because the world is mirrored (see world.js)
-    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - dy * 0.0022)); }
+  look(dx, dy) { const sx = this.invX ? -1 : 1, sy = this.invY ? -1 : 1; this.yaw += sx * dx * 0.0022;  // + because the world is mirrored (see world.js)
+    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - sy * dy * 0.0022)); }
   teleport(x, z, yaw, floor) { this.x = x; this.z = z; this.yaw = yaw ?? this.yaw; this.floor = floor ?? this.floor; this.y = groundY(x, z, this.floor); this.pitch = 0; }
   disable() { this.enabled = false; this.dragging = false; this.keys.clear(); this.vx = this.vz = 0; }
 
@@ -46,7 +46,7 @@ export class Player {
       if (turn) this.yaw -= turn * 1.9 * dt; if (pit) this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + pit * 1.4 * dt));
       const f = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0), s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
       const run = k.has('ShiftLeft') || k.has('ShiftRight'), sp = run ? 4.4 : 2.4;
-      let dx = -Math.sin(this.yaw) * f + Math.cos(this.yaw) * s, dz = -Math.cos(this.yaw) * f - Math.sin(this.yaw) * s;
+      let dx = -Math.sin(this.yaw) * f - Math.cos(this.yaw) * s, dz = -Math.cos(this.yaw) * f + Math.sin(this.yaw) * s; // strafe signs flipped: the world is mirrored
       const l = Math.hypot(dx, dz); if (l > 0) { dx /= l; dz /= l; }
       const a = Math.min(1, dt * 12); this.vx += (dx * sp - this.vx) * a; this.vz += (dz * sp - this.vz) * a;
     } else { this.vx = this.vz = 0; }
@@ -77,7 +77,7 @@ export class Player {
       if (turn) this.yaw -= turn * 1.9 * dt; if (pit) this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + pit * 1.4 * dt));
       const f = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0), s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
       const sp = k.has('ShiftLeft') || k.has('ShiftRight') ? 11 : 4.5;
-      dx = (-Math.sin(this.yaw) * f + Math.cos(this.yaw) * s) * sp; dz = (-Math.cos(this.yaw) * f - Math.sin(this.yaw) * s) * sp; dy = ((k.has('KeyE') ? 1 : 0) - (k.has('KeyQ') ? 1 : 0)) * sp * 0.7;
+      dx = (-Math.sin(this.yaw) * f - Math.cos(this.yaw) * s) * sp; dz = (-Math.cos(this.yaw) * f + Math.sin(this.yaw) * s) * sp; dy = ((k.has('KeyE') ? 1 : 0) - (k.has('KeyQ') ? 1 : 0)) * sp * 0.7;
     }
     this.x = Math.max(-33, Math.min(33, this.x + dx * dt)); this.z = Math.max(-30, Math.min(30, this.z + dz * dt)); this.flyY = Math.max(0.5, Math.min(14, this.flyY + dy * dt));
     this.floor = this.flyY > 3.2 ? 1 : 0; this.setCamera(this.flyY);
