@@ -13,6 +13,10 @@ Click "Enter the bar". Audio starts after your first click. If pointer lock is b
 
 ## Controls
 `WASD` move · mouse (or `←↑↓→`) look · `Shift` run · `E` interact · `P` drop a pin · `Esc` pause / close computer.
+Quick keys: `T` Autopilot on/off · `O` open the bar · `1` `2` `3` game speed (1×/2×/4×) · `H` hide/show the first-run tips. Pause really pauses the game.
+
+**Relaxed mode:** press `T` (or use the Dashboard) and the bar runs itself: it hires a bartender and a waiter, books the act with the best expected return for your seats, opens every evening, and the night report arrives as a quiet message. Fixed costs are low and a normal night is gently profitable; reputation never drops sharply, and turned-away guests cost nothing.
+Graphics quality adapts only after several seconds of genuinely slow frames (never because of an alt-tab) and recovers when things are smooth again.
 You can walk out the front door into the street; the music is muffled and fades with distance outside.
 
 ## Building mode (free-roam 3D editing)
