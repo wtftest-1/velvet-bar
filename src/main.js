@@ -15,7 +15,7 @@ import { Sim } from './sim.js';
 import { JazzAudio } from './audio.js';
 import { Desktop } from './ui/desktop.js';
 import { h } from './ui/dom.js';
-import { loadState, newState, saveSoon, saveNow, resetSave, fmt, dayName, clockStr } from './state.js';
+import { loadState, newState, saveSoon, saveNow, resetSave, fmt, dayName, clockStr, SAVE_KEY } from './state.js';
 import { GUESTS } from './data/catalog.js';
 
 const $ = s => document.querySelector(s);
@@ -56,6 +56,8 @@ const world = new World(scene, renderer);
 const nav = new Nav();
 const crowd = new Crowd(world.mirror, world, nav);
 const player = new Player(camera, canvas, world); player.yaw = 0;
+state.prefs ??= { invX: false, invY: false }; player.invX = !!state.prefs.invX; player.invY = !!state.prefs.invY;
+for (const [id, k] of [['inv-x', 'invX'], ['inv-y', 'invY']]) { const el = $('#' + id); el.checked = !!state.prefs[k]; el.addEventListener('change', () => { state.prefs[k] = el.checked; player[k] = el.checked; saveSoon(state); }); }
 let resetting = false;
 
 const toast = (msg, bad = false) => {
@@ -75,6 +77,9 @@ const ctx = {
   setArt(src) { state.art = src; world.fx.setArt(src); saveSoon(state); },
   setSurface(key, id) { state.surfaces[key] = id; world.setSurface(key, id); saveSoon(state); },
   setQuality(q) { state.quality = q; applyQuality(q === 'auto' ? 'high' : q); saveSoon(state); }, closeDesktop: () => closeDesktop(), enterBuild: () => enterBuild(), exitBuild: () => exitBuild(),
+  setPref(k, v) { state.prefs[k] = v; player[k] = v; for (const [id, kk] of [['inv-x', 'invX'], ['inv-y', 'invY']]) if (kk === k) $('#' + id).checked = v; saveSoon(state); },
+  exportSave: () => JSON.stringify(state),
+  importSave(text) { const s = JSON.parse(text); if (!s || s.v !== 1 || !Array.isArray(s.items) || !s.fin) throw new Error('That is not a Velvet Note save file.'); resetting = true; localStorage.setItem(SAVE_KEY, JSON.stringify(s)); location.reload(); },
   resetGame() { resetting = true; resetSave(); location.reload(); },
   onReport: rep => showReport(rep),
 };

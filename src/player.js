@@ -8,14 +8,14 @@ export class Player {
   constructor(camera, dom, world) {
     this.camera = camera; this.dom = dom; this.world = world;
     this.x = 0; this.z = 6.2; this.y = 0; this.yaw = Math.PI; this.pitch = 0; this.floor = 0;
-    this.fly = false; this.flyY = 4; this.keys = new Set(); this.enabled = false; this.dragMode = false; this.dragging = false; this.bob = 0; this.vx = 0; this.vz = 0;
+    this.invX = false; this.invY = false; this.fly = false; this.flyY = 4; this.keys = new Set(); this.enabled = false; this.dragMode = false; this.dragging = false; this.bob = 0; this.vx = 0; this.vz = 0;
     this.onLockChange = () => {}; this.onLockError = () => {};
     camera.rotation.order = 'YXZ';
     const typing = e => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName);
     window.addEventListener('keydown', e => { if (typing(e)) return; this.keys.add(e.code); if (this.enabled && e.code.startsWith('Arrow')) e.preventDefault(); });
     window.addEventListener('keyup', e => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
-    document.addEventListener('mousemove', e => { if (this.enabled && this.locked) this.look(e.movementX, e.movementY); else if (this.enabled && this.dragging) this.look(e.movementX, e.movementY); });
+    document.addEventListener('mousemove', e => { if (this.enabled && this.locked) this.look(e.movementX, e.movementY); else if (this.enabled && this.dragging) this.look(-e.movementX, -e.movementY); });  // click-drag look is "grab the world" style
     dom.addEventListener('pointerdown', e => { if (this.enabled && !this.locked && this.dragMode) { this.dragging = true; dom.setPointerCapture?.(e.pointerId); } });
     window.addEventListener('pointerup', () => { this.dragging = false; });
     document.addEventListener('pointerlockchange', () => this.onLockChange(this.locked));
@@ -27,8 +27,8 @@ export class Player {
     setTimeout(() => { if (this.enabled && !this.locked) { this.dragMode = true; } }, 700);
   }
   unlock() { if (this.locked) document.exitPointerLock(); }
-  look(dx, dy) { this.yaw += dx * 0.0022;  // + because the world is mirrored (see world.js)
-    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - dy * 0.0022)); }
+  look(dx, dy) { const sx = this.invX ? -1 : 1, sy = this.invY ? -1 : 1; this.yaw += sx * dx * 0.0022;  // + because the world is mirrored (see world.js)
+    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - sy * dy * 0.0022)); }
   teleport(x, z, yaw, floor) { this.x = x; this.z = z; this.yaw = yaw ?? this.yaw; this.floor = floor ?? this.floor; this.y = groundY(x, z, this.floor); this.pitch = 0; }
   disable() { this.enabled = false; this.dragging = false; this.keys.clear(); this.vx = this.vz = 0; }
 
