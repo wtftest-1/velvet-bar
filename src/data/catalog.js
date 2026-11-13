@@ -413,19 +413,20 @@ Object.assign(FURNITURE, {
 
 // ── Rooms: partition walls so you can build your own rooms ────────────────
 Object.assign(FURNITURE, {
+  // `resize: [min, max]` metres → the length can be changed after placing (price is per 3 m). `parts` may be a function of the length.
   partition: {
-    name: 'Partition wall (3 m)', cat: 'Rooms', price: 900, fp: [3.0, 0.16],
+    name: 'Partition wall', cat: 'Rooms', price: 900, fp: [3.0, 0.16], resize: [1, 12],
     slots: { wall: 'wood', trim: 'metal' }, defaults: { wall: 'walnut', trim: 'brass' },
-    parts: [B('wall', 3.0, 3.2, 0.12, 0, 0, 0), B('trim', 3.06, 0.07, 0.16, 0, 3.2, 0), B('trim', 3.06, 0.12, 0.16, 0, 0, 0)],
+    parts: L => [B('wall', L, 3.2, 0.12, 0, 0, 0), B('trim', L + 0.06, 0.07, 0.16, 0, 3.2, 0), B('trim', L + 0.06, 0.12, 0.16, 0, 0, 0)],
   },
   partition_glass: {
-    name: 'Glass partition (3 m)', cat: 'Rooms', price: 1300, fp: [3.0, 0.16],
+    name: 'Glass partition', cat: 'Rooms', price: 1300, fp: [3.0, 0.16], resize: [1, 12],
     slots: { trim: 'metal' }, defaults: { trim: 'brass' },
-    parts: [B('@glass', 2.9, 2.6, 0.03, 0, 0.35, 0), B('trim', 3.0, 0.08, 0.1, 0, 2.95, 0), B('trim', 3.0, 0.35, 0.1, 0, 0, 0), ...[-1.45, 0, 1.45].map(x => B('trim', 0.07, 3.0, 0.1, x, 0, 0))],
+    parts: L => { const n = Math.max(1, Math.round(L / 1.5)); return [B('@glass', L - 0.1, 2.6, 0.03, 0, 0.35, 0), B('trim', L, 0.08, 0.1, 0, 2.95, 0), B('trim', L, 0.35, 0.1, 0, 0, 0), ...Array.from({ length: n + 1 }, (_, i) => -L / 2 + i * L / n).map(x => B('trim', 0.07, 3.0, 0.1, x, 0, 0))]; },
   },
   half_wall: {
-    name: 'Half wall with marble top', cat: 'Rooms', price: 650, fp: [3.0, 0.3],
+    name: 'Half wall with marble top', cat: 'Rooms', price: 650, fp: [3.0, 0.3], resize: [1, 12],
     slots: { wall: 'wood', top: 'stone', trim: 'metal' }, defaults: { wall: 'mahogany', top: 'marble_black', trim: 'brass' },
-    parts: [B('wall', 3.0, 1.05, 0.22, 0, 0, 0), B('top', 3.06, 0.05, 0.3, 0, 1.05, 0), B('trim', 3.0, 0.03, 0.04, 0, 0.12, 0.12)],
+    parts: L => [B('wall', L, 1.05, 0.22, 0, 0, 0), B('top', L + 0.06, 0.05, 0.3, 0, 1.05, 0), B('trim', L, 0.03, 0.04, 0, 0.12, 0.12)],
   },
 });

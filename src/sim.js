@@ -2,7 +2,7 @@
 import { ACTS, ADS, CONFIG, FURNITURE, GUESTS, MENU, STAFF_ROLES } from './data/catalog.js';
 import { fin, post, isWeekend, clockStr, dayName } from './state.js';
 import { Person, guestLook } from './npcs.js';
-import { DOOR } from './plan.js';
+import { DOOR, DIMS } from './plan.js';
 
 const rand = Math.random, clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const actById = id => ACTS.find(a => a.id === id);
@@ -111,7 +111,7 @@ export class Sim {
     const path = this.nav.path(0, npc.x, npc.z, ...target);
     if (!path) { this.dropGuest(g); n.turnedAway++; return; }
     if (final) path.push(final);
-    npc.walk(path, () => { if (seat) { npc.sitDown(seat); g.state = 'seated'; } else { g.state = 'standing'; npc.faceTo(0, -6); } }, 1.3);
+    npc.walk(path, () => { if (seat) { npc.sitDown(seat); g.state = 'seated'; } else { g.state = 'standing'; npc.faceTo(0, -6 - DIMS.stage); } }, 1.3);
   }
 
   dropGuest(g) {

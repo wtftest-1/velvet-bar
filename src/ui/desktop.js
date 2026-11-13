@@ -20,8 +20,8 @@ export class Desktop {
     this.root.replaceChildren(h('div', { class: 'dt-frame' },
       h('header', { class: 'dt-top' }, h('span', { class: 'dt-logo' }, 'VELVET OS 8.6'), h('span', { class: 'muted' }, s.name + ' · Office terminal'),
         h('span', { class: 'dt-info' }, this.info.day, this.info.clock, this.info.cash),
-        h('button', { class: 'btn small gold', type: 'button', onclick: () => this.ctx.enterBuild() }, 'Walk & build in 3D'),
-        h('button', { class: 'btn small', type: 'button', onclick: () => this.ctx.closeDesktop(), 'aria-label': 'Close computer (Escape)' }, 'Close  Esc')),
+        h('button', { class: 'btn gold', type: 'button', onclick: () => this.ctx.enterBuild() }, 'Walk & build in 3D ▸'),
+        h('button', { class: 'btn danger', type: 'button', onclick: () => this.ctx.closeDesktop(), 'aria-label': 'Close computer (Escape)' }, '✕ Close computer')),
       this.dock, this.main,
       h('footer', { class: 'dt-status' }, this.status, h('span', null, 'Autosaved on this device · nothing leaves your browser'))));
     this.select(appId || this.last);

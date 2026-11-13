@@ -1,8 +1,14 @@
 // Architecture data shared by the 3D world, collisions, pathfinding and the 2D floor plan.
-// Logic coordinates: x right (when entering), z towards the street (front wall z=+8, stage at z=-8), y up. Metres.
+// Logic coordinates: x right (when entering), z towards the street (front wall z=+8, stage at the back), y up. Metres.
 // NOTE: the rendered world is mirrored on x (see world.js) so the bar appears on the right when looking from the stage.
+//
+// The hall can be made LONGER (the back wall moves away from the street, `DIMS.hall` metres) and the stage can be pushed back inside it
+// (`DIMS.stage` metres). Call applyDims() to change them; everything below that depends on them is rebuilt in place, so every module
+// that imported `walls`, `INNER`, `STAGE`... keeps seeing the live values.
 
+export const MAX_HALL = 16;
 export const BLD = { X0: -12, X1: 12, Z0: -8, Z1: 8, H: 7.2, F1: 3.6, CEIL0: 3.3 };
+export const DIMS = { hall: 0, stage: 0 };
 export const INNER = [
   { x0: -11.85, x1: 11.85, z0: -7.85, z1: 7.85 },   // ground floor
   { x0: -11.85, x1: 11.85, z0: 0.12, z1: 7.85 },    // upper floor
@@ -42,59 +48,74 @@ function vWall(f, x, za, zb, gaps, t, style, o = {}) {
   if (zb > cur) add(f, x, cur, x, zb, t, style, o);
 }
 
-// outer shell (both floors, full height)
-hWall(-1, 8, -12, 12, [[ENTRANCE.x0, ENTRANCE.x1]], 0.3, 'damask', { h: BLD.H, hdr: 2.6 });
-hWall(-1, -8, -12, 12, [], 0.3, 'damask', { h: BLD.H });
-vWall(-1, -12, -8, 8, [], 0.3, 'damask', { h: BLD.H });
-vWall(-1, 12, -8, 8, [], 0.3, 'damask', { h: BLD.H });
-// ground: coat check (front-left) and restrooms (front-right)
-hWall(0, 4, -12, -7.5, [], 0.15, 'damask');
-vWall(0, -7.5, 4, 8, [[4.6, 7.2]], 0.15, 'damask');
-hWall(0, 4, 7.5, 12, [], 0.15, 'marble');
-hWall(0, 6, 7.5, 12, [], 0.12, 'marble');
-vWall(0, 7.5, 4, 8, [[4.6, 5.6], [6.6, 7.6]], 0.15, 'marble');
-// ground: private staircase enclosure (secret door gap); both floors, it also guards the stairs
-vWall(-1, DOOR.x, -8, 0, [[DOOR.z0, DOOR.z1]], 0.2, 'panel', { h: BLD.H, hdr: 2.4 });
-
-// upper floor: left wing (cigar room + dining), central VIP lounge with its terrace, right wing (office + corridor)
-hWall(1, 0, -10.2, -5.5, [], 0.2, 'panel');                       // cigar room front (the secret stairs arrive in its corner)
-vWall(1, -5.5, 0, 8, [[1.4, 2.6], [5.6, 6.8]], 0.2, 'green');     // left wing | lounge (two doorways)
-hWall(1, 4.2, -12, -5.5, [], 0.15, 'green');                      // cigar room | dining room
-vWall(1, 6, 0, 5.5, [], 0.15, 'panel');                           // lounge | office
-hWall(1, 0, 6, 12, [[10, 11]], 0.2, 'roundwin');                  // office front wall: round window + door to the private terrace
-hWall(1, 5.5, 6, 12, [[8, 9]], 0.15, 'green');                    // office | corridor
-
-// ── extra colliders (non-wall fixtures) ─────────────────────────────────────
+// ── extra colliders (non-wall fixtures) + zones where furniture may NOT be placed ─
 export const fixtureCols = [[], []];
-const R = (x0, x1, z0, z1) => ({ x0, x1, z0, z1 });
-fixtureCols[0].push(
-  R(9.9, 10.7, -3.6, 3.9),        // bar counter
-  R(11.3, 11.85, -5.6, 3.9),      // back bar
-  R(-7.85, -7.3, 4.6, 7.2),       // coat counter
-  R(2.5, 3.5, 6.1, 6.7),          // host stand
-  R(-6.85, -4.55, -7.0, -5.4),    // grand piano
-  R(2.9, 4.8, -7.2, -5.4),        // drums
-  R(-2.0, -1.3, -6.4, -5.7),      // upright bass
-  R(11.3, 11.85, 4.3, 7.8),       // restroom sinks / stalls
-);
-fixtureCols[1].push(
-  R(RAIL.x0, RAIL.x1, RAIL.z - 0.1, RAIL.z + 0.1), R(RAIL.x0 - 0.1, RAIL.x0 + 0.05, RAIL.z - 0.1, 0.12), R(RAIL.x1 - 0.05, RAIL.x1 + 0.1, RAIL.z - 0.1, 0.12),   // central terrace rails
-  R(TERRACE2.x0, TERRACE2.x1, TERRACE2.z0 - 0.1, TERRACE2.z0 + 0.1), R(TERRACE2.x0 - 0.1, TERRACE2.x0 + 0.05, TERRACE2.z0 - 0.1, 0.12), R(TERRACE2.x1 - 0.05, TERRACE2.x1 + 0.1, TERRACE2.z0 - 0.1, 0.12),
-  R(6.9, 9.1, 1.4, 2.35),          // desk
-  R(11.0, 11.9, 4.3, 5.4),         // safe
-  R(11.4, 11.9, 1.4, 2.8),         // record console
-  R(6.5, 7.4, 4.3, 5.0),           // bar cart
-);
-// outside: neighbouring buildings, street boundaries, parked cars
-fixtureCols[0].push(R(12.3, 70, -60, 8.3), R(-70, -12.3, -60, 8.3), R(34, 70, 8.3, 60), R(-70, -34, 8.3, 60), R(-70, 70, 32, 60), R(-19.3, -14.7, 14.0, 16.0), R(15.7, 20.3, 14.0, 16.0));
-
-// Zones where furniture may NOT be placed (besides walls).
 export const blockZones = [[], []];
-blockZones[0].push(
-  R(-7.5, 7.5, -8, -4.5), R(9.8, 11.9, -5.7, 4), R(-12, -7.4, 3.9, 8), R(7.4, 12, 3.9, 8),
-  R(-12, -10.1, -8, 0.2), R(2.3, 3.7, 5.9, 6.9), R(-1.5, 1.5, 6.2, 8), R(-0.4, 0.4, -4.5, 6.2), // entrance + central aisle
-);
-blockZones[1].push(R(6, 12, 0, 5.5), R(-12, -10.1, 0, 2.4), R(RAIL.x0, RAIL.x1, 0, 0.6), R(-5.9, -5.1, 1.2, 2.8), R(-5.9, -5.1, 5.4, 7.0), R(5.6, 6.4, 5.4, 7.6));
+const R = (x0, x1, z0, z1) => ({ x0, x1, z0, z1 });
+
+const clampInt = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
+
+/** Set the hall length (extra metres at the back, 0…MAX_HALL) and how far the stage is pushed back (0…hall). Rebuilds walls, colliders and zones in place. */
+export function applyDims(hall = 0, stage = 0) {
+  hall = clampInt(hall, 0, MAX_HALL); stage = clampInt(stage, 0, hall);
+  DIMS.hall = hall; DIMS.stage = stage;
+  BLD.Z0 = -8 - hall; INNER[0].z0 = -7.85 - hall;
+  STAGE.z0 = BLD.Z0; STAGE.z1 = -4.5 - stage;
+
+  walls.length = 0;
+  const Z0 = BLD.Z0;
+  // outer shell (both floors, full height)
+  hWall(-1, 8, -12, 12, [[ENTRANCE.x0, ENTRANCE.x1]], 0.3, 'damask', { h: BLD.H, hdr: 2.6 });
+  hWall(-1, Z0, -12, 12, [], 0.3, 'damask', { h: BLD.H });
+  vWall(-1, -12, Z0, 8, [], 0.3, 'damask', { h: BLD.H });
+  vWall(-1, 12, Z0, 8, [], 0.3, 'damask', { h: BLD.H });
+  // ground: coat check (front-left) and restrooms (front-right)
+  hWall(0, 4, -12, -7.5, [], 0.15, 'damask');
+  vWall(0, -7.5, 4, 8, [[4.6, 7.2]], 0.15, 'damask');
+  hWall(0, 4, 7.5, 12, [], 0.15, 'marble');
+  hWall(0, 6, 7.5, 12, [], 0.12, 'marble');
+  vWall(0, 7.5, 4, 8, [[4.6, 5.6], [6.6, 7.6]], 0.15, 'marble');
+  // ground: private staircase enclosure (secret door gap); both floors, it also guards the stairs
+  vWall(-1, DOOR.x, -8, 0, [[DOOR.z0, DOOR.z1]], 0.2, 'panel', { h: BLD.H, hdr: 2.4 });
+  if (hall > 0) hWall(-1, -8, -12, DOOR.x, [], 0.2, 'panel', { h: BLD.H }); // closes the back of the staircase when the hall is longer
+
+  // upper floor: left wing (cigar room + dining), central VIP lounge with its terrace, right wing (office + corridor)
+  hWall(1, 0, -10.2, -5.5, [], 0.2, 'panel');                       // cigar room front (the secret stairs arrive in its corner)
+  vWall(1, -5.5, 0, 8, [[1.4, 2.6], [5.6, 6.8]], 0.2, 'green');     // left wing | lounge (two doorways)
+  hWall(1, 4.2, -12, -5.5, [], 0.15, 'green');                      // cigar room | dining room
+  vWall(1, 6, 0, 5.5, [], 0.15, 'panel');                           // lounge | office
+  hWall(1, 0, 6, 12, [[10, 11]], 0.2, 'roundwin');                  // office front wall: round window + door to the private terrace
+  hWall(1, 5.5, 6, 12, [[8, 9]], 0.15, 'green');                    // office | corridor
+
+  for (const f of [0, 1]) { fixtureCols[f].length = 0; blockZones[f].length = 0; }
+  const s = stage;
+  fixtureCols[0].push(
+    R(9.9, 10.7, -3.6, 3.9),        // bar counter
+    R(11.3, 11.85, -5.6, 3.9),      // back bar
+    R(-7.85, -7.3, 4.6, 7.2),       // coat counter
+    R(2.5, 3.5, 6.1, 6.7),          // host stand
+    R(-6.85, -4.55, -7.0 - s, -5.4 - s),    // grand piano
+    R(2.9, 4.8, -7.2 - s, -5.4 - s),        // drums
+    R(-2.0, -1.3, -6.4 - s, -5.7 - s),      // upright bass
+    R(11.3, 11.85, 4.3, 7.8),       // restroom sinks / stalls
+  );
+  fixtureCols[1].push(
+    R(RAIL.x0, RAIL.x1, RAIL.z - 0.1, RAIL.z + 0.1), R(RAIL.x0 - 0.1, RAIL.x0 + 0.05, RAIL.z - 0.1, 0.12), R(RAIL.x1 - 0.05, RAIL.x1 + 0.1, RAIL.z - 0.1, 0.12),   // central terrace rails
+    R(TERRACE2.x0, TERRACE2.x1, TERRACE2.z0 - 0.1, TERRACE2.z0 + 0.1), R(TERRACE2.x0 - 0.1, TERRACE2.x0 + 0.05, TERRACE2.z0 - 0.1, 0.12), R(TERRACE2.x1 - 0.05, TERRACE2.x1 + 0.1, TERRACE2.z0 - 0.1, 0.12),
+    R(6.9, 9.1, 1.4, 2.35),          // desk
+    R(11.0, 11.9, 4.3, 5.4),         // safe
+    R(11.4, 11.9, 1.4, 2.8),         // record console
+    R(6.5, 7.4, 4.3, 5.0),           // bar cart
+  );
+  // outside: neighbouring buildings, street boundaries, parked cars
+  fixtureCols[0].push(R(12.3, 70, -60, 8.3), R(-70, -12.3, -60, 8.3), R(34, 70, 8.3, 60), R(-70, -34, 8.3, 60), R(-70, 70, 32, 60), R(-19.3, -14.7, 14.0, 16.0), R(15.7, 20.3, 14.0, 16.0));
+  blockZones[0].push(
+    R(-7.5, 7.5, Z0, STAGE.z1), R(9.8, 11.9, -5.7, 4), R(-12, -7.4, 3.9, 8), R(7.4, 12, 3.9, 8),
+    R(-12, -10.1, -8, 0.2), R(2.3, 3.7, 5.9, 6.9), R(-1.5, 1.5, 6.2, 8), R(-0.4, 0.4, STAGE.z1, 6.2), // entrance + central aisle
+  );
+  blockZones[1].push(R(6, 12, 0, 5.5), R(-12, -10.1, 0, 2.4), R(RAIL.x0, RAIL.x1, 0, 0.6), R(-5.9, -5.1, 1.2, 2.8), R(-5.9, -5.1, 5.4, 7.0), R(5.6, 6.4, 5.4, 7.6));
+}
+applyDims(0, 0);
 
 export const wallRects = f => walls.filter(w => w.collide && (w.f === f || w.f === -1));
 

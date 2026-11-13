@@ -1,10 +1,11 @@
 // The list of office-computer apps (order = dock order). Each: { id, title, icon, render(ctx, api, params) → element | {el, dispose} }
-import { dashboard, pinsApp, staffApp, bookingsApp, eventsApp, adsApp, invitesApp, financeApp, menuApp, musicApp, settingsApp } from './apps.js';
+import { dashboard, pinsApp, staffApp, bookingsApp, eventsApp, adsApp, invitesApp, financeApp, menuApp, musicApp, settingsApp, buildingApp } from './apps.js';
 import { designApp } from './design.js';
 
 export const APPS = [
   { id: 'dashboard', title: 'Dashboard', icon: '◈', render: dashboard },
   { id: 'design', title: 'Design', icon: '▦', render: designApp },
+  { id: 'building', title: 'Building size', icon: '⌂', render: buildingApp },
   { id: 'pins', title: 'Pins', icon: '◉', render: pinsApp },
   { id: 'staff', title: 'Staff', icon: '☺', render: staffApp },
   { id: 'bookings', title: 'Bookings', icon: '♪', render: bookingsApp },

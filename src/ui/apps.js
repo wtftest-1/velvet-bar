@@ -2,6 +2,7 @@
 import { h } from './dom.js';
 import { STAFF_ROLES, ACTS, ADS, MENU, GUESTS, CONFIG } from '../data/catalog.js';
 import { fmt, fmt2, dayName, clockStr, fin, isWeekend } from '../state.js';
+import { dimsPanel } from './widgets.js';
 
 const page = (title, sub, ...kids) => h('div', null, h('h2', { class: 'app-h' }, title), sub ? h('p', { class: 'app-sub' }, sub) : null, ...kids);
 const tile = (k, v, cls = '') => { const val = h('div', { class: 'v ' + cls }, v); return Object.assign(h('div', { class: 'tile' }, h('div', { class: 'k' }, k), val), { val }); };
@@ -202,6 +203,13 @@ export function musicApp(ctx, api) {
       h('div', { class: 'panel' }, h('h3', null, 'Volume'), vol, h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', 'aria-pressed': String(a.muted), onclick: e => { a.start(); a.setMuted(!a.muted); e.target.setAttribute('aria-pressed', String(a.muted)); e.target.textContent = a.muted ? 'Unmute' : 'Mute'; } }, a.muted ? 'Unmute' : 'Mute')))),
     h('div', { class: 'panel', style: { marginTop: '14px' } }, h('h3', null, 'Your playlist'), h('label', { for: 'mp3' }, 'Add MP3 / audio files (stay on this device, not saved between sessions)'), file, list));
   return { el, dispose: () => { a.onChange = prevCb; } };
+}
+
+// ── Building size ───────────────────────────────────────────────────────────
+export function buildingApp(ctx) {
+  const box = h('div', { style: { maxWidth: '520px' } }), draw = () => box.replaceChildren(dimsPanel(ctx, draw)); draw();
+  return page('Building size', 'Make the hall longer or move the stage away from the VIP terrace. Then use “Walk & build in 3D” to see it and furnish the new space.',
+    box, h('div', { class: 'row' }, h('button', { class: 'btn gold big', type: 'button', onclick: () => ctx.enterBuild() }, 'Walk & build in 3D ▸')));
 }
 
 // ── 12. Settings ────────────────────────────────────────────────────────────
