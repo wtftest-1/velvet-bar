@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Velvet Note · Jazz Bar</title>
+  <meta name="description" content="Design, run and manage your own 1980s jazz bar in first person. Runs locally in your browser." />
+</head>
+<body>
+  <div id="app">
+    <canvas id="view" tabindex="0" aria-label="First-person 3D view of your jazz bar"></canvas>
+
+    <div id="hud" hidden>
+      <div id="hud-top" role="status" aria-label="Bar status">
+        <span id="h-name" class="hud-name"></span>
+        <span id="h-day"></span><span id="h-time"></span>
+        <span id="h-state" class="pill"></span>
+        <span id="h-cash"></span><span id="h-guests"></span>
+      </div>
+      <div id="crosshair" aria-hidden="true"></div>
+      <div id="prompt" role="status" aria-live="polite"></div>
+      <div id="controls-bar" aria-label="Controls">
+        <span><kbd>WASD</kbd> move</span><span><kbd>Mouse</kbd>/<kbd>←↑↓→</kbd> look</span><span><kbd>Shift</kbd> run</span>
+        <span><kbd>E</kbd> interact</span><span><kbd>P</kbd> drop a pin</span><span><kbd>Esc</kbd> pause</span>
+      </div>
+    </div>
+
+    <div id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+    <div id="overlay" role="dialog" aria-modal="true" aria-labelledby="ov-title">
+      <div class="ov-card">
+        <p class="ov-kicker">A jazz bar of your own</p>
+        <h1 id="ov-title">The Velvet Note</h1>
+        <p id="ov-sub" class="ov-sub">Burgundy velvet, brass, walnut and a slow ballad in the air. Step inside, then climb to your office to design, staff and run the room.</p>
+        <button id="ov-btn" class="btn gold big" type="button">Enter the bar</button>
+        <div class="ov-grid">
+          <div><kbd>W A S D</kbd><span>walk</span></div><div><kbd>Mouse</kbd><span>look (or click-drag)</span></div>
+          <div><kbd>Shift</kbd><span>run</span></div><div><kbd>E</kbd><span>interact / invite to VIP</span></div>
+          <div><kbd>P</kbd><span>drop a note pin</span></div><div><kbd>Esc</kbd><span>pause / close computer</span></div>
+        </div>
+        <p class="ov-note">Everything runs and is saved on this device only. Nothing is sent anywhere. Audio starts after your first click.</p>
+        <button id="ov-reset" class="linkbtn" type="button" hidden>Resume</button>
+      </div>
+    </div>
+
+    <div id="pin-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="pin-title">
+      <form class="card" id="pin-form">
+        <h2 id="pin-title">Drop a pin</h2>
+        <p class="muted" id="pin-where"></p>
+        <label for="pin-note">Note (e.g. “add a plant here”)</label>
+        <input id="pin-note" type="text" maxlength="90" autocomplete="off" />
+        <div class="row"><button class="btn gold" type="submit">Save pin</button><button class="btn" type="button" id="pin-cancel">Cancel</button></div>
+      </form>
+    </div>
+
+    <div id="report" hidden role="dialog" aria-modal="true" aria-labelledby="rep-title"></div>
+    <div id="desktop" hidden role="dialog" aria-modal="true" aria-label="Office computer"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
