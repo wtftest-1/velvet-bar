@@ -27,6 +27,7 @@ export function buildFixtures(world) {
   const R = world.root, fx = { anchors: {}, updaters: [] };
   const spin = [];
   buildBar(world, fx); buildStage(world, fx); buildSecretDoor(world, fx); buildFoyerRooms(world, fx); buildOffice(world, fx, spin); buildNeons(world, fx);
+  for (const p of spin) p.userData.dynamic = true; // spinning record: never merged
   for (const [x, y, z, ry] of [[-11.8, 2.3, 1.2, Math.PI / 2], [-11.8, 2.3, 3.0, Math.PI / 2], [-11.8, 5.0, -3.5, Math.PI / 2], [-11.8, 6.3, 5.5, Math.PI / 2], [-11.8, 6.3, 2.0, Math.PI / 2],
     [-7.35, 2.3, 7.8, Math.PI], [7.0, 2.3, 7.8, Math.PI], [11.8, 6.3, 4.0, -Math.PI / 2], [-8.3, 2.6, -7.8 - DIMS.hall, Math.PI], [8.3, 2.6, -7.8 - DIMS.hall, Math.PI], [-3.4, 6.3, 3.0, -Math.PI / 2], [1.4, 6.3, 3.0, -Math.PI / 2], [-11.8, 4.8, -2.5, Math.PI / 2]])
     sconce(world, x, y, z, ry);
@@ -98,7 +99,7 @@ function buildStage(world, fx) {
 
 // ── SECRET BOOKSHELF DOOR ──────────────────────────────────────────────────
 function buildSecretDoor(world, fx) {
-  const R = world.root, hinge = group(R, DOOR.x, 0, DOOR.z0), leaf = group(hinge);
+  const R = world.root, hinge = group(R, DOOR.x, 0, DOOR.z0), leaf = group(hinge); hinge.userData.dynamic = true; // animated: never merged
   box(leaf, ARCH.panel, 0.05, 2.4, 1.0, -0.05, 0, 0.5);
   box(leaf, ARCH.wood, 0.2, 2.4, 0.06, 0.05, 0, 0.03); box(leaf, ARCH.wood, 0.2, 2.4, 0.06, 0.05, 0, 0.97);
   box(leaf, ARCH.wood, 0.2, 0.06, 1.0, 0.05, 2.34, 0.5);
@@ -203,7 +204,7 @@ function buildOffice(world, fx, spin) {
   const frame = group(R, 10.0, y0 + 1.9, 5.4); frame.rotation.y = Math.PI;
   box(frame, ARCH.gold, 1.95, 1.45, 0.08, 0, -0.725, 0);
   let artMat = new THREE.MeshStandardMaterial({ map: artworkPlaceholder(), roughness: 0.6, emissive: 0xffffff, emissiveIntensity: 0.35 }); artMat.emissiveMap = artMat.map;
-  const art = new THREE.Mesh(new THREE.PlaneGeometry(1.75, 1.25), artMat); art.position.set(0, 0, 0.045); frame.add(art);
+  const art = new THREE.Mesh(new THREE.PlaneGeometry(1.75, 1.25), artMat); art.position.set(0, 0, 0.045); art.userData.dynamic = true; frame.add(art);
   fx.setArt = (src) => {
     const apply = (tex, aspect) => {
       artMat.map?.dispose(); artMat.map = tex; artMat.emissiveMap = tex; artMat.needsUpdate = true;
@@ -218,7 +219,7 @@ function buildOffice(world, fx, spin) {
   [['CAM 1 · ENTRANCE', 2.45, new THREE.Vector3(-3.4, 3.05, 3.2), new THREE.Vector3(0, 1.3, 7.8)], ['CAM 2 · VIP STAIRS', 3.55, new THREE.Vector3(-11.1, 6.7, -0.4), new THREE.Vector3(-11.1, 0.4, -6.2)]].forEach(([label, z, pos, look]) => {
     const rt = new THREE.WebGLRenderTarget(256, 144); rt.texture.colorSpace = THREE.SRGBColorSpace; flipTex(rt.texture);
     const cam = new THREE.PerspectiveCamera(62, 16 / 9, 0.1, 40); cam.position.set(-pos.x, pos.y, pos.z); cam.lookAt(-look.x, look.y, look.z);
-    const g = group(R, 6.3, y0 + 1.33, z); g.rotation.y = Math.PI / 2;
+    const g = group(R, 6.3, y0 + 1.33, z); g.rotation.y = Math.PI / 2; g.userData.dynamic = true;
     box(g, std({ color: 0x1d1a18, roughness: 0.6 }), 0.5, 0.4, 0.34, 0, 0, 0);
     const scr = vplane(g, new THREE.MeshBasicMaterial({ map: rt.texture, toneMapped: false, color: 0xc8ffd8 }), 0.44, 0.25, 0, 0.22, 0.172);
     vplane(g, new THREE.MeshBasicMaterial({ map: labelTexture(label, { w: 256, h: 40, font: '700 20px monospace', bg: '#0a0a0a', fg: '#7fe8a0', border: false }), toneMapped: false }), 0.44, 0.07, 0, 0.05, 0.172);

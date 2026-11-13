@@ -13,10 +13,14 @@ Click "Enter the bar". Audio starts after your first click. If pointer lock is b
 
 ## Controls
 `WASD` move · mouse (or `←↑↓→`) look · `Shift` run · `E` interact · `P` drop a pin · `Esc` pause / close computer.
+Quick keys: `T` Autopilot on/off · `O` open the bar · `1` `2` `3` game speed (1×/2×/4×) · `H` hide/show the first-run tips. Pause really pauses the game.
+
+**Relaxed mode:** press `T` (or use the Dashboard) and the bar runs itself: it hires a bartender and a waiter, books the act with the best expected return for your seats, opens every evening, and the night report arrives as a quiet message. Fixed costs are low and a normal night is gently profitable; reputation never drops sharply, and turned-away guests cost nothing.
+Graphics quality adapts only after several seconds of genuinely slow frames (never because of an alt-tab) and recovers when things are smooth again.
 You can walk out the front door into the street; the music is muffled and fades with distance outside.
 
 ## Building mode (free-roam 3D editing)
-At the office computer press **Walk & build in 3D** (top bar, or in Design). You fly through the whole building (`WASD`, `Q`/`E` down/up, `Shift` fast, hold the **right mouse button** to look) and can:
+At the office computer press **Walk & build in 3D** (top bar, or in Design). You fly through the whole building (`WASD`, `Q`/`E` down/up, `Shift` fast, **drag on empty space** (or hold the middle/right mouse button, or use the arrow keys) to look) and can:
 - click any furniture to select it, **drag** it, `R` rotate, `Del` sell (50% back), recolour it;
 - **Buy furniture** tab: every item has a rendered 3D preview; press Place, move the ghost (green = OK, red = blocked), click to buy;
 - **Paint** tab: pick a finish, then click a wall, floor or ceiling to repaint that area;

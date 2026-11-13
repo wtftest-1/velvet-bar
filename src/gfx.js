@@ -1,5 +1,6 @@
 // Mesh helpers. All textured surfaces get world-scale UVs (material.userData.tile = metres per repeat).
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 function scaleBoxUV(geo, w, h, d, tile) {
   const uv = geo.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
@@ -39,4 +40,26 @@ export function retile(m, tile) {
   const info = m.userData.uvInfo; if (!info || !tile) return; const uv = m.geometry.attributes.uv;
   for (let i = 0; i < uv.count; i++) { const [du, dv] = info.dims[info.perFace ? i >> 2 : 0]; uv.setXY(i, info.base[2 * i] * du / tile, info.base[2 * i + 1] * dv / tile); }
   uv.needsUpdate = true;
+}
+
+/**
+ * Draw-call saver: merges every static mesh under `root` into one mesh per material.
+ * Skipped: instanced meshes, anything tagged for repainting (userData.surfKey), anything inside a group flagged userData.dynamic
+ * (door, record player, monitors, artwork) and meshes missing position/normal/uv. Geometry keeps its world-scale UVs, so looks are unchanged.
+ */
+export function mergeStatic(root) {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), buckets = new Map(), done = [];
+  root.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || o.userData.surfKey || !o.visible || Array.isArray(o.material)) return;
+    const a = o.geometry.attributes; if (!a.position || !a.normal || !a.uv) return;
+    for (let p = o; p && p !== root; p = p.parent) if (p.userData.dynamic) return;
+    let b = buckets.get(o.material); if (!b) buckets.set(o.material, b = []);
+    const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone());
+    for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') g.deleteAttribute(k);
+    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)); b.push(g); done.push(o);
+  });
+  for (const o of done) { o.parent?.remove(o); o.geometry.dispose(); }
+  for (const [mat, list] of buckets) { const m = new THREE.Mesh(mergeGeometries(list, false), mat); m.userData.merged = true; root.add(m); for (const g of list) g.dispose(); }
+  return { merged: done.length, meshes: buckets.size };
 }

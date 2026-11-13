@@ -33,9 +33,9 @@ export class Sim {
     const cap = 14 * this.staffN('bartender') + 10 * this.staffN('waiter');
     return cap === 0 ? 0.25 : Math.min(1, cap / Math.max(load, 6));
   }
-  potential() {
-    const day = this.s.day, act = this.actFor(day);
-    let p = 12 + this.s.rep * 0.5 + this.hype() * 0.4 + (act ? act.pop * 0.3 : 0) + (this.staffN('pianist') && !act ? 3 : 0);
+  potential(forAct) {
+    const day = this.s.day, act = forAct === undefined ? this.actFor(day) : forAct;
+    let p = 18 + this.s.rep * 0.55 + this.hype() * 0.4 + (act ? act.pop * 0.5 : 0) + (this.staffN('pianist') && !act ? 4 : 0);
     if (isWeekend(day)) p *= 1.25; if (this.staffN('doorman')) p *= 1.08;
     return p;
   }
@@ -123,7 +123,7 @@ export class Sim {
   tickGuest(g) {
     const n = this.night;
     if (g.state === 'seated' || g.state === 'standing') {
-      if (g.type === 'special' && !g.vip && n.min >= g.waitUntil) { n.specialsMissed++; g.inv.status = 'missed'; n.notes.push(`${g.name} waited downstairs and left disappointed. Invite them up next time!`); this.leave(g, true); return; }
+      if (g.type === 'special' && !g.vip && n.min >= g.waitUntil) { n.specialsMissed++; g.inv.status = 'missed'; n.notes.push(`${g.name} waited downstairs and had to leave. Invite them up next time!`); this.leave(g, true); return; }
       if (n.min >= g.nextOrder && (g.type !== 'special' || g.vip)) this.order(g);
       if (n.min >= g.leaveAt) this.leave(g);
     }
@@ -132,7 +132,7 @@ export class Sim {
   order(g) {
     const n = this.night, sf = this.serviceFactor(), vip = g.vip;
     g.sfSum += sf; g.sfN++;
-    const gap = (g.type === 'special' ? 28 : 24 + rand() * 12);
+    const gap = (g.type === 'special' ? 28 : 18 + rand() * 10);
     g.nextOrder = n.min + gap / (0.5 + sf * 0.5) * (this.s.rep > 60 ? 0.9 : 1); g.orders++;
     if (sf < 0.5) { g.waitedLong = true; g.leaveAt -= 4; }
     if (g.type === 'special') { // bottle service
@@ -220,14 +220,14 @@ export class Sim {
     this.settleDay(true);
     // reputation
     const avgSat = n.satN ? n.satSum / n.satN : 0.3;
-    let delta = (avgSat - 0.62) * 14 + n.vipServed * 0.15 + n.repBonus - n.specialsMissed * 1.5 - Math.min(2, n.turnedAway * 0.12);
-    if (!n.satN) delta = -2; delta = clamp(delta, -6, 8);
+    let delta = (avgSat - 0.62) * 9 + n.vipServed * 0.15 + n.repBonus - n.specialsMissed * 0.5 - Math.min(0.5, n.turnedAway * 0.03);
+    if (!n.satN) delta = 0; delta = clamp(delta, -1.5, 8); // reputation only ever drifts down gently
     const oldRep = s.rep; s.rep = clamp(s.rep + delta, 0, 100);
     // notes
-    if (!this.staffN('bartender')) n.notes.push('No bartender: service was slow and guests were less satisfied.');
-    if (n.turnedAway > 2) n.notes.push(`${n.turnedAway} guests were turned away: there were no free seats. Add furniture.`);
-    if (!n.act) n.notes.push('No live act tonight. Book one in Bookings for a bigger crowd.');
-    if (this.priceRatio() > 1.2) n.notes.push('Prices are well above the standard menu, so guests order less often.');
+    if (!this.staffN('bartender')) n.notes.push('A bartender would make service smoother (Staff).');
+    if (n.turnedAway > 3) n.notes.push('Some guests could not find a seat tonight. A few more tables would welcome them.');
+    if (!n.act) n.notes.push('A live act would draw a bigger crowd (Bookings).');
+    if (this.priceRatio() > 1.2) n.notes.push('Prices are above the standard menu, so guests order a little less often.');
     const rep = this.buildReport(n, avgSat, s.rep - oldRep);
     s.history.push({ day: s.day, rev: rep.revenue, cost: rep.costs, net: rep.net, guests: n.arrived, cash: s.fin.cash }); if (s.history.length > 60) s.history.shift();
     s.lastReport = rep; s.cleanliness = clamp(s.cleanliness - 0.3 * n.arrived / 60, 0.1, 1);
@@ -313,4 +313,16 @@ Sim.prototype.sendInvite = function (guestId, day) {
 };
 Sim.prototype.hire = function (role) { const r = STAFF_ROLES[role], s = this.s; if (s.staff[role] >= r.max) return false; s.staff[role]++; this.ctx.staffChanged(); this.ctx.save(); return true; };
 Sim.prototype.fire = function (role) { const s = this.s; if (s.staff[role] <= 0) return false; s.staff[role]--; this.ctx.staffChanged(); this.ctx.save(); return true; };
+/** Autopilot: staff the bar sensibly, book an affordable (varied) act and open the doors. Returns true when it opened the bar. */
+Sim.prototype.autoPrepare = function () {
+  const s = this.s; if (s.open || this.night) return false;
+  for (const role of ['bartender', 'waiter']) if (!this.staffN(role) && s.fin.cash > 4000) this.hire(role);
+  if (s.cleanliness < 0.5 && !this.staffN('cleaner') && s.fin.cash > 4000) this.hire('cleaner');
+  if (!this.actFor(s.day)) { // pick the act with the best expected return for the seats we have (a bigger crowd than seats is wasted)
+    const seats = this.seatCount(0), gain = a => Math.min(this.potential(a), seats * 1.15) * 38 - a.fee;
+    const best = ACTS.filter(a => a.fee <= s.fin.cash * 0.06).map(a => [a, gain(a)]).filter(([, g]) => g > 0).sort((x, y) => y[1] - x[1]);
+    if (best.length) this.bookAct(s.day, best[Math.min(best.length - 1, s.day % 2)][0].id); // alternate between the top two for a little variety
+  }
+  return this.openBar();
+};
 Sim.DOOR = DOOR; Sim.clockStr = clockStr;

@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { BLD, DIMS, STAIRS, RAIL, TERRACE2, WINDOW, walls, staticRects, INNER } from './plan.js';
 import { ARCH, makeEnvironment, initMaterials } from './materials.js';
-import { box, cyl, flat, vplane, group, retile, sph } from './gfx.js';
+import { box, cyl, flat, vplane, group, retile, sph, mergeStatic } from './gfx.js';
 import { SURFACES } from './data/catalog.js';
 import { buildFixtures } from './fixtures.js';
 import { buildItem, matSig, colsOf, seatsOf, itemTransform } from './furniture.js';
@@ -20,7 +20,7 @@ export class World {
     this.itemObjs = new Map(); this.seats = []; this.dyn = [[], []]; this.rects = [staticRects(0), staticRects(1)];
     this.layoutVersion = 0; this.pinMarkers = []; this.surf = {}; this.lightsG = group(this.mirror);
     this.buildLights(); this.buildShell(); this.buildExterior();
-    this.fx = buildFixtures(this);
+    this.fx = buildFixtures(this); this.merge = location.search.includes('nomerge') ? null : mergeStatic(this.root); // ?nomerge in the URL turns the optimisation off (for comparing)
   }
 
   /** Rebuild shell, exterior, lights and fixtures after plan.applyDims() changed the hall length / stage distance. Furniture, pins and the door state are kept. */
@@ -29,7 +29,7 @@ export class World {
     for (const g of [this.root, this.lightsG]) { g.traverse(o => o.geometry?.dispose()); g.clear(); }
     this.surf = {};
     this.buildLights(); this.buildShell(); this.buildExterior();
-    const fx = buildFixtures(this);
+    const fx = buildFixtures(this); this.merge = location.search.includes('nomerge') ? null : mergeStatic(this.root); // ?nomerge in the URL turns the optimisation off (for comparing)
     for (const [k, v] of Object.entries(old.anchors)) if (fx.anchors[k]) v.copy(fx.anchors[k]); // keep the Vector3s main.js captured
     fx.anchors = old.anchors;
     Object.assign(fx.door, { open: old.door.open, target: old.door.target, ang: old.door.ang });
