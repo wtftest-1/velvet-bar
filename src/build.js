@@ -67,7 +67,7 @@ export class BuildMode {
 
   // ── pointer ───────────────────────────────────────────────────────────────
   onDown(e) {
-    if (e.button === 2) { this.looking = true; this.canvas.setPointerCapture?.(e.pointerId); return; }
+    if (e.button === 2 || e.button === 1) { e.preventDefault(); this.looking = true; this.canvas.setPointerCapture?.(e.pointerId); return; }
     if (e.button !== 0) return;
     if (this.placing) { this.updateGhost(e); this.tryPlace(); return; }
     if (this.tool === 'paint') { this.paintAt(e); return; }
@@ -76,7 +76,7 @@ export class BuildMode {
       this.selId = it.id; const hit = this.floorHit(e), d = FURNITURE[it.k];
       this.drag = { id: it.id, orig: { x: it.x, z: it.z, r: it.r }, dx: hit && !isWallItem(d) ? it.x - hit.point.x : 0, dz: hit && !isWallItem(d) ? it.z - hit.point.z : 0, moved: false, bad: false };
       this.canvas.setPointerCapture?.(e.pointerId);
-    } else this.selId = null;
+    } else { this.selId = null; this.looking = true; this.canvas.setPointerCapture?.(e.pointerId); } // drag on empty space = look around (no right button needed: browser mouse gestures hijack right-drag)
     this.render();
   }
   onMove(e) {
@@ -155,7 +155,7 @@ export class BuildMode {
     this.root.replaceChildren(h('div', { class: 'bd-panel' },
       h('div', { class: 'row', style: { margin: 0, justifyContent: 'space-between' } }, h('h2', { class: 'app-h', style: { fontSize: '20px', margin: 0 } }, 'Build mode'), h('span', null, 'Cash ', this.cashEl)),
       tabs, body, this.hintEl,
-      h('div', { class: 'legend' }, h('kbd', null, 'WASD'), ' fly · ', h('kbd', null, 'Q'), '/', h('kbd', null, 'E'), ' down/up · ', h('kbd', null, 'Shift'), ' fast · hold ', h('kbd', null, 'right mouse'), ' to look · ', h('kbd', null, 'R'), ' rotate · ', h('kbd', null, 'Del'), ' sell · ', h('kbd', null, 'Esc'), ' cancel / deselect'),
+      h('div', { class: 'legend' }, h('kbd', null, 'WASD'), ' fly · ', h('kbd', null, 'Q'), '/', h('kbd', null, 'E'), ' down/up · ', h('kbd', null, 'Shift'), ' fast · drag empty space (or middle mouse) to look · ', h('kbd', null, 'R'), ' rotate · ', h('kbd', null, 'Del'), ' sell · ', h('kbd', null, 'Esc'), ' cancel / deselect'),
       h('button', { class: 'btn danger big', type: 'button', onclick: () => this.ctx.exitBuild() }, '✕ Exit build mode')));
   }
   selectPanel() {

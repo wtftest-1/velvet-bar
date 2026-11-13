@@ -127,7 +127,7 @@ window.addEventListener('pointerdown', () => audio.start(), { once: false, passi
 window.addEventListener('keydown', () => audio.start(), { passive: true });
 
 function openDesktop() { player.unlock(); setMode('desktop'); desktop.open(); }
-function enterBuild() { desktop.close(); player.unlock(); setMode('build'); build.enter(); toast('Build mode: fly with WASD, right-drag to look, click furniture to edit.'); }
+function enterBuild() { desktop.close(); player.unlock(); setMode('build'); build.enter(); toast('Build mode: fly with WASD, drag empty space to look, click furniture to edit.'); }
 function exitBuild() { build.exit(); setMode('desktop'); desktop.open('design'); }
 function closeDesktop() { desktop.close(); setMode('play'); player.lock(); canvas.focus(); }
 

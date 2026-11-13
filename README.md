@@ -16,7 +16,7 @@ Click "Enter the bar". Audio starts after your first click. If pointer lock is b
 You can walk out the front door into the street; the music is muffled and fades with distance outside.
 
 ## Building mode (free-roam 3D editing)
-At the office computer press **Walk & build in 3D** (top bar, or in Design). You fly through the whole building (`WASD`, `Q`/`E` down/up, `Shift` fast, hold the **right mouse button** to look) and can:
+At the office computer press **Walk & build in 3D** (top bar, or in Design). You fly through the whole building (`WASD`, `Q`/`E` down/up, `Shift` fast, **drag on empty space** (or hold the middle/right mouse button, or use the arrow keys) to look) and can:
 - click any furniture to select it, **drag** it, `R` rotate, `Del` sell (50% back), recolour it;
 - **Buy furniture** tab: every item has a rendered 3D preview; press Place, move the ghost (green = OK, red = blocked), click to buy;
 - **Paint** tab: pick a finish, then click a wall, floor or ceiling to repaint that area;
