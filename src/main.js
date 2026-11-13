@@ -237,7 +237,7 @@ function hud() {
 }
 
 // ── loop ────────────────────────────────────────────────────────────────────
-const clock = new THREE.Clock(); let T = 0, ema = 0.016, slowT = 0;
+const clock = new THREE.Clock(); let T = 0, ema = 0.016, slowT = 0, fastT = 0, warmT = 0, lastDrop = -999, drops = 0;
 function resize() { renderer.setSize(innerWidth, innerHeight, false); composer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 addEventListener('beforeunload', () => { if (!resetting) saveNow(state); });
@@ -246,9 +246,17 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && !re
 function frame() {
   requestAnimationFrame(frame);
   const raw = clock.getDelta(), dt = Math.min(raw, 0.1); T += dt;
-  // auto quality: if frames stay slow, step the graphics down one level
-  ema += (raw - ema) * 0.05; slowT = ema > 0.04 ? slowT + raw : 0;
-  if (state.quality === 'auto' && slowT > 2.5 && qLevel !== 'fast' && mode !== 'menu') { const nl = qLevel === 'high' ? 'balanced' : 'fast'; applyQuality(nl); slowT = 0; ema = 0.016; toast(`Graphics lowered to “${nl}” to keep things smooth (Settings ▸ Graphics).`); }
+  // auto quality: step down one level only after ~5 s of genuinely slow frames, and step back up after a long smooth stretch.
+  // Hitches (alt-tab, a long frame), hidden tabs, the menu and the first seconds of play are not measurements, so quality never drops by accident.
+  if (raw > 0.25 || document.hidden || mode === 'menu') { slowT = 0; fastT = 0; }
+  else if (state.quality === 'auto') {
+    warmT += raw; ema += (raw - ema) * 0.05;
+    if (warmT > 8) {
+      slowT = ema > 0.045 ? slowT + raw : 0; fastT = ema < 0.02 ? fastT + raw : 0;
+      if (slowT > 5 && qLevel !== 'fast') { applyQuality(qLevel === 'high' ? 'balanced' : 'fast'); drops++; lastDrop = T; slowT = fastT = 0; ema = 0.016; toast('Graphics eased a little to keep things smooth (Settings ▸ Graphics).'); }
+      else if (fastT > 40 && qLevel !== 'high' && drops < 3 && T - lastDrop > 60) { applyQuality(qLevel === 'fast' ? 'balanced' : 'high'); slowT = fastT = 0; ema = 0.016; }
+    }
+  }
   const sdt = sim.night ? dt * state.speed : dt;
   sim.update(dt); crowd.update(sdt, T, !!sim.night);
   player.update(dt);
