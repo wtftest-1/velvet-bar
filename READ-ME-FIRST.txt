@@ -1,1 +1,4 @@
-Double-click START-GAME.bat (Windows). Keep the black window open while you play.
+Windows:
+1) First time only: install Node.js (nodejs.org) and Git (git-scm.com).
+2) Double-click START-GAME.bat to play.
+3) To get the latest version: double-click UPDATE-GAME.bat, then START-GAME.bat.
