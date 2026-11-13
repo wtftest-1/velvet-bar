@@ -27,7 +27,8 @@ export class Player {
     setTimeout(() => { if (this.enabled && !this.locked) { this.dragMode = true; } }, 700);
   }
   unlock() { if (this.locked) document.exitPointerLock(); }
-  look(dx, dy) { this.yaw -= dx * 0.0022; this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - dy * 0.0022)); }
+  look(dx, dy) { this.yaw += dx * 0.0022;  // + because the world is mirrored (see world.js)
+    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - dy * 0.0022)); }
   teleport(x, z, yaw, floor) { this.x = x; this.z = z; this.yaw = yaw ?? this.yaw; this.floor = floor ?? this.floor; this.y = groundY(x, z, this.floor); this.pitch = 0; }
   disable() { this.enabled = false; this.dragging = false; this.keys.clear(); this.vx = this.vz = 0; }
 
@@ -42,7 +43,7 @@ export class Player {
     if (this.fly) { this.updateFly(dt); return; }
     if (this.enabled) {
       const k = this.keys, turn = (k.has('ArrowLeft') ? 1 : 0) - (k.has('ArrowRight') ? 1 : 0), pit = (k.has('ArrowUp') ? 1 : 0) - (k.has('ArrowDown') ? 1 : 0);
-      if (turn) this.yaw += turn * 1.9 * dt; if (pit) this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + pit * 1.4 * dt));
+      if (turn) this.yaw -= turn * 1.9 * dt; if (pit) this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + pit * 1.4 * dt));
       const f = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0), s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
       const run = k.has('ShiftLeft') || k.has('ShiftRight'), sp = run ? 4.4 : 2.4;
       let dx = -Math.sin(this.yaw) * f + Math.cos(this.yaw) * s, dz = -Math.cos(this.yaw) * f - Math.sin(this.yaw) * s;
@@ -73,7 +74,7 @@ export class Player {
     const k = this.keys; let dx = 0, dz = 0, dy = 0;
     if (this.enabled) {
       const turn = (k.has('ArrowLeft') ? 1 : 0) - (k.has('ArrowRight') ? 1 : 0), pit = (k.has('ArrowUp') ? 1 : 0) - (k.has('ArrowDown') ? 1 : 0);
-      if (turn) this.yaw += turn * 1.9 * dt; if (pit) this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + pit * 1.4 * dt));
+      if (turn) this.yaw -= turn * 1.9 * dt; if (pit) this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + pit * 1.4 * dt));
       const f = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0), s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
       const sp = k.has('ShiftLeft') || k.has('ShiftRight') ? 11 : 4.5;
       dx = (-Math.sin(this.yaw) * f + Math.cos(this.yaw) * s) * sp; dz = (-Math.cos(this.yaw) * f - Math.sin(this.yaw) * s) * sp; dy = ((k.has('KeyE') ? 1 : 0) - (k.has('KeyQ') ? 1 : 0)) * sp * 0.7;
