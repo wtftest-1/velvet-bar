@@ -1,6 +1,6 @@
 // Hand-built fixtures: bar, stage + instruments, secret bookshelf door, coat check, restrooms, office, cameras, neon.
 import * as THREE from 'three';
-import { BLD, STAGE, DOOR, DESK, ENTRANCE, WINDOW, TERRACE2 } from './plan.js';
+import { BLD, DIMS, STAGE, DOOR, DESK, ENTRANCE, WINDOW, TERRACE2 } from './plan.js';
 import { ARCH, ensureSpecial } from './materials.js';
 import { box, cyl, sph, flat, vplane, group } from './gfx.js';
 import { neonTexture, labelTexture, artworkPlaceholder, flipTex } from './textures.js';
@@ -28,7 +28,7 @@ export function buildFixtures(world) {
   const spin = [];
   buildBar(world, fx); buildStage(world, fx); buildSecretDoor(world, fx); buildFoyerRooms(world, fx); buildOffice(world, fx, spin); buildNeons(world, fx);
   for (const [x, y, z, ry] of [[-11.8, 2.3, 1.2, Math.PI / 2], [-11.8, 2.3, 3.0, Math.PI / 2], [-11.8, 5.0, -3.5, Math.PI / 2], [-11.8, 6.3, 5.5, Math.PI / 2], [-11.8, 6.3, 2.0, Math.PI / 2],
-    [-7.35, 2.3, 7.8, Math.PI], [7.0, 2.3, 7.8, Math.PI], [11.8, 6.3, 4.0, -Math.PI / 2], [-8.3, 2.6, -7.8, Math.PI], [8.3, 2.6, -7.8, Math.PI], [-3.4, 6.3, 3.0, -Math.PI / 2], [1.4, 6.3, 3.0, -Math.PI / 2], [-11.8, 4.8, -2.5, Math.PI / 2]])
+    [-7.35, 2.3, 7.8, Math.PI], [7.0, 2.3, 7.8, Math.PI], [11.8, 6.3, 4.0, -Math.PI / 2], [-8.3, 2.6, -7.8 - DIMS.hall, Math.PI], [8.3, 2.6, -7.8 - DIMS.hall, Math.PI], [-3.4, 6.3, 3.0, -Math.PI / 2], [1.4, 6.3, 3.0, -Math.PI / 2], [-11.8, 4.8, -2.5, Math.PI / 2]])
     sconce(world, x, y, z, ry);
   fx.update = (dt, t, ctx) => { for (const u of fx.updaters) u(dt, t, ctx); for (const s of spin) s.rotation.y += dt * (ctx.musicPlaying ? 2.0 : 0); };
   return fx;
@@ -57,14 +57,14 @@ function buildBar(world, fx) {
 
 // ── STAGE ──────────────────────────────────────────────────────────────────
 function buildStage(world, fx) {
-  const R = world.root, st = group(R), H = STAGE.h;
-  box(st, ARCH.wood, 15, H, 3.5, 0, 0, -6.25);
+  const R = world.root, st = group(R, 0, 0, -DIMS.stage), H = STAGE.h, back = DIMS.hall - DIMS.stage; // back = extra platform depth up to the back wall
+  box(st, ARCH.wood, 15, H, 3.5 + back, 0, 0, -6.25 - back / 2);
   box(st, ARCH.brass, 15.02, 0.05, 0.06, 0, H - 0.06, -4.5); box(st, ARCH.black, 15, 0.12, 0.04, 0, 0.06, -4.49);
   box(st, new THREE.MeshStandardMaterial({ color: 0x331a08, emissive: 0xffa040, emissiveIntensity: 1.4 }), 14.6, 0.025, 0.04, 0, 0.3, -4.47);
   // velvet curtains
   const cm = ARCH.velvet;
-  for (let i = 0; i < 40; i++) box(st, cm, 0.39, 6.6, i % 2 ? 0.14 : 0.32, -7.4 + i * 0.38, H, -7.7);
-  box(st, cm, 15.1, 0.8, 0.5, 0, 6.3, -7.45); box(st, ARCH.gold, 15.1, 0.05, 0.54, 0, 6.28, -7.45); box(st, ARCH.gold, 15.1, 0.04, 0.54, 0, 7.0, -7.45);
+  for (let i = 0; i < 40; i++) box(st, cm, 0.39, 6.6, i % 2 ? 0.14 : 0.32, -7.4 + i * 0.38, H, -7.7 - back);
+  box(st, cm, 15.1, 0.8, 0.5, 0, 6.3, -7.45 - back); box(st, ARCH.gold, 15.1, 0.05, 0.54, 0, 6.28, -7.45 - back); box(st, ARCH.gold, 15.1, 0.04, 0.54, 0, 7.0, -7.45 - back);
   for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) box(st, cm, 0.34, 6.1, 0.3 + (i % 2) * 0.12, sx * 7.3, H, -4.8 - i * 0.62);
   // spotlight cans
   for (const x of [-3.5, 3.5]) { const c = cyl(st, ARCH.brass, 0.18, 0.12, 0.4, x, 6.55, -2.6); c.rotation.x = -0.6; }
@@ -224,6 +224,7 @@ function buildOffice(world, fx, spin) {
     vplane(g, new THREE.MeshBasicMaterial({ map: labelTexture(label, { w: 256, h: 40, font: '700 20px monospace', bg: '#0a0a0a', fg: '#7fe8a0', border: false }), toneMapped: false }), 0.44, 0.07, 0, 0.05, 0.172);
     feeds.push({ rt, cam, group: g, scr });
   });
+  (fx.disposers ??= []).push(() => feeds.forEach(f => f.rt.dispose()));
   let ti = 0, acc = 0;
   fx.updaters.push((dt, t, ctx) => {
     acc += dt; if (acc < 0.7 || !ctx.camsActive) return; acc = 0;
@@ -256,5 +257,5 @@ function buildNeons(world, fx) {
   fx.setName = name => { sign.mat.map.dispose(); sign.mat.map = neonTexture(name || 'The Velvet Note', '#ff6b4a', 1024, 256); sign.mat.needsUpdate = true; };
   mk('Jazz', '#ff4fa3', 1.8, 0.6, -11.75, 3.2, 2.2, Math.PI / 2, 512, 170, 'italic 700 130px "Brush Script MT", cursive');
   mk('Open', '#4fe8d0', 1.1, 0.5, -3.6, 2.9, 7.8, Math.PI, 512, 220, 'italic 700 150px "Brush Script MT", cursive');
-  mk('Live Music', '#ffb347', 2.4, 0.6, -9.2, 5.8, -7.82, 0, 1024, 256, 'italic 700 150px "Brush Script MT", cursive');
+  mk('Live Music', '#ffb347', 2.4, 0.6, -9.2, 5.8, -7.82 - DIMS.hall, 0, 1024, 256, 'italic 700 150px "Brush Script MT", cursive');
 }

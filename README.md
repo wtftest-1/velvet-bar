@@ -18,10 +18,14 @@ You can walk out the front door into the street; the music is muffled and fades 
 ## Building mode (free-roam 3D editing)
 At the office computer press **Walk & build in 3D** (top bar, or in Design). You fly through the whole building (`WASD`, `Q`/`E` down/up, `Shift` fast, hold the **right mouse button** to look) and can:
 - click any furniture to select it, **drag** it, `R` rotate, `Del` sell (50% back), recolour it;
-- **Furniture** tab: every item has a rendered 3D preview; press Place, move the ghost (green = OK, red = blocked), click to buy;
+- **Buy furniture** tab: every item has a rendered 3D preview; press Place, move the ghost (green = OK, red = blocked), click to buy;
 - **Paint** tab: pick a finish, then click a wall, floor or ceiling to repaint that area;
-- **Rooms** category: partition walls, glass partitions and half walls to build your own rooms.
-`Esc` steps back (deselect → exit) to the computer.
+- **Rooms** category: partition walls, glass partitions and half walls to build your own rooms. Pick the length (1–12 m) before placing, or select a placed wall and use the big − / + buttons (longer costs the price difference, shorter refunds half);
+- **Building size** tab (also in the computer: Design, and its own **Building size** app): make the hall up to 16 m longer (the back wall moves away from the street) and push the stage further away from the VIP terrace. Free; the bar must be closed, and it refuses if furniture would end up in a wall or on the stage. The width stays 24 m.
+
+`Esc` only cancels a placement / deselects: it never leaves build mode. Leave with the red **Exit build mode** button. While you are in build mode the browser asks before the page can be closed or navigated away.
+
+The office computer and the build panel use a light theme with big buttons: green = buy / place / confirm / selected, red = sell / delete / close / exit.
 
 ## The game
 - **Only the office computer designs the bar** (upstairs, behind the secret bookshelf: press `E` on it; only you can open it).

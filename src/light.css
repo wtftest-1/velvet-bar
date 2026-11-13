@@ -1,0 +1,82 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   LIGHT MODE for the office computer (#desktop) and the 3D build panel (#build).
+   Big buttons. Green = go / buy / confirm / selected. Red = sell / delete / close / exit.
+   The game world, HUD, menus and toasts keep the dark velvet look (style.css).
+   ─────────────────────────────────────────────────────────────────────────── */
+:is(#desktop, #build) {
+  --bg: #f4f0e8; --wine: #ffffff; --wine2: #f6f2ea; --wine3: #ebe4d8; --gold: #7a1f2b; --gold2: #c9bfae; --cream: #1d1a17; --dim: #5f564c; --ok: #14803f; --bad: #c62828;
+  --green: #1f9d55; --green2: #157a40; --red: #d63a2a; --red2: #b02a1d; --line: #d9d1c5;
+  color: var(--cream); font-family: system-ui, 'Segoe UI', Roboto, sans-serif; font-size: 15px;
+}
+#desktop { background: #e6dfd2; padding: 12px; }
+#desktop .dt-frame { grid-template-rows: 64px 1fr 30px; grid-template-columns: 224px 1fr; background: #fbf9f5; border: 2px solid #cfc5b3; box-shadow: 0 12px 40px rgba(60, 40, 20, .2); }
+#desktop .dt-top { background: #fff; border-bottom: 2px solid var(--line); font-size: 15px; gap: 14px; }
+#desktop .dt-logo { color: var(--gold); font-size: 22px; } #desktop .dt-info { color: var(--cream); font-weight: 600; }
+#desktop .dt-dock { background: #f1ece2; border-right: 2px solid var(--line); gap: 6px; padding: 10px; }
+#desktop .dock-btn { font: 600 16px system-ui, sans-serif; color: var(--cream); padding: 13px 12px; border-radius: 10px; border: 2px solid transparent; }
+#desktop .dock-btn:hover { background: rgba(0, 0, 0, .05); }
+#desktop .dock-btn[aria-selected=true] { background: #fff; border-color: var(--gold); color: var(--gold); box-shadow: 0 2px 0 rgba(122, 31, 43, .25); }
+#desktop .dock-ic { color: var(--gold); font-size: 18px; }
+#desktop .dt-main { background: #fbf9f5; padding: 20px 24px; }
+#desktop .dt-status { background: #f1ece2; color: var(--dim); border-top: 2px solid var(--line); font-size: 12px; }
+:is(#desktop, #build) .app-h { color: var(--gold); font-size: 30px; }
+:is(#desktop, #build) .app-sub, :is(#desktop, #build) .legend, :is(#desktop, #build) .muted { color: var(--dim); font-size: 13px; }
+:is(#desktop, #build) .legend { line-height: 1.55; }
+:is(#desktop, #build) kbd { background: #fff; color: var(--cream); border: 1px solid #b8ad9b; border-bottom-width: 2px; }
+:is(#desktop, #build) .panel { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+:is(#desktop, #build) .panel h3 { color: var(--gold); font-size: 18px; }
+:is(#desktop, #build) .tile { background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+:is(#desktop, #build) .tile .k { color: var(--dim); } :is(#desktop, #build) .tile .v { color: var(--cream); }
+:is(#desktop, #build) th { background: #f1ece2; color: var(--gold); border-bottom: 2px solid var(--line); }
+:is(#desktop, #build) td { border-bottom: 1px solid #ece6da; font-size: 13px; }
+:is(#desktop, #build) table { font-size: 13px; }
+:is(#desktop, #build) .bar { background: #e6dfd2; border-color: var(--line); height: 12px; } :is(#desktop, #build) .bar > i { background: var(--green); }
+:is(#desktop, #build) .msg { background: #f6f2ea; border: 2px solid var(--line); color: var(--cream); font-size: 14px; border-radius: 10px; }
+:is(#desktop, #build) .msg.bad { border-color: var(--bad); color: var(--bad); background: #fdeeee; }
+:is(#desktop, #build) .chip { color: var(--gold); border-color: var(--gold2); font-size: 12px; } :is(#desktop, #build) .chip.ok { color: var(--ok); border-color: var(--ok); } :is(#desktop, #build) .chip.bad { color: var(--bad); border-color: var(--bad); }
+:is(#desktop, #build) label { color: var(--dim); font-size: 13px; }
+:is(#desktop, #build) input[type=text], :is(#desktop, #build) input[type=number], :is(#desktop, #build) select { font: 15px system-ui, sans-serif; color: var(--cream); background: #fff; border: 2px solid #b8ad9b; border-radius: 10px; padding: 10px 12px; min-height: 44px; }
+:is(#desktop, #build) input[type=range] { accent-color: var(--green); }
+:is(#desktop, #build) input[type=color] { border: 2px solid #b8ad9b; border-radius: 8px; width: 48px; height: 34px; background: #fff; }
+:is(#desktop, #build) input:focus-visible, :is(#desktop, #build) select:focus-visible, :is(#desktop, #build) .btn:focus-visible, :is(#desktop, #build) .dock-btn:focus-visible, :is(#desktop, #build) .sw:focus-visible { outline: 3px solid #1565c0; outline-offset: 2px; }
+
+/* buttons: big, flat, colour-coded */
+:is(#desktop, #build) .btn { font: 700 15px/1.2 system-ui, 'Segoe UI', sans-serif; min-height: 46px; padding: 10px 18px; color: var(--cream); background: #fff; border: 2px solid #b8ad9b; border-radius: 10px; box-shadow: 0 3px 0 #d2c8b8; letter-spacing: 0; }
+:is(#desktop, #build) .btn:hover:not(:disabled) { filter: none; background: #f6f2ea; border-color: #8d8170; }
+:is(#desktop, #build) .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #d2c8b8; }
+:is(#desktop, #build) .btn.small { min-height: 40px; padding: 8px 14px; font-size: 14px; }
+:is(#desktop, #build) .btn.big { min-height: 58px; padding: 12px 28px; font-size: 18px; font-family: system-ui, sans-serif; }
+:is(#desktop, #build) .btn.gold { background: var(--green); border-color: var(--green2); color: #fff; box-shadow: 0 3px 0 var(--green2); }
+:is(#desktop, #build) .btn.gold:hover:not(:disabled) { background: #25b365; border-color: var(--green2); }
+:is(#desktop, #build) .btn.danger { background: var(--red); border-color: var(--red2); color: #fff; box-shadow: 0 3px 0 var(--red2); }
+:is(#desktop, #build) .btn.danger:hover:not(:disabled) { background: #e5493a; border-color: var(--red2); }
+:is(#desktop, #build) .btn:disabled { opacity: .38; box-shadow: none; }
+:is(#desktop, #build) .seg { border: 2px solid #b8ad9b; border-radius: 10px; background: #fff; }
+:is(#desktop, #build) .seg button { border: 0; border-right: 2px solid #b8ad9b; border-radius: 0; box-shadow: none; min-height: 44px; }
+:is(#desktop, #build) .seg button:last-child { border-right: 0; }
+:is(#desktop, #build) .seg button[aria-pressed=true] { background: var(--green); color: #fff; }
+:is(#desktop, #build) .sw { width: 32px; height: 32px; border: 3px solid #d9d1c5; } :is(#desktop, #build) .sw[aria-pressed=true] { border-color: #1d1a17; box-shadow: 0 0 0 3px var(--green); }
+
+/* plan, catalogue, finishes */
+#desktop .design { grid-template-columns: 290px minmax(0, 1fr) 320px; }
+#desktop #plan { border: 2px solid #cfc5b3; background: #f1ece2; border-radius: 10px; }
+:is(#desktop, #build) .cat-item, :is(#desktop, #build) .thumbcard { background: #fff; border: 2px solid var(--line); border-radius: 12px; }
+:is(#desktop, #build) .thumbcard.on { border-color: var(--green); background: #eaf7ef; }
+:is(#desktop, #build) .cat-item .p, :is(#desktop, #build) .thumbcard .p { color: var(--green2); font-weight: 700; font-size: 13px; }
+:is(#desktop, #build) .cat-item .n { font-size: 13px; } :is(#desktop, #build) .thumbcard b { font-size: 14px; }
+:is(#desktop, #build) .thumb { background: #efe9dd; border: 1px solid var(--line); }
+:is(#desktop, #build) .finish { background: #fff; color: var(--cream); border: 2px solid var(--line); border-radius: 10px; font: 600 13px system-ui, sans-serif; padding: 6px; }
+:is(#desktop, #build) .finish[aria-pressed=true] { border-color: var(--green); background: #eaf7ef; }
+#build .bd-panel { width: 372px; background: rgba(251, 249, 245, .97); border: 2px solid #cfc5b3; box-shadow: 0 12px 40px rgba(0, 0, 0, .35); gap: 12px; }
+#build .bd-panel .app-h { font-size: 24px; }
+
+/* size steppers (building size, room length) */
+.stepper-row { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.stepper-label { font: 700 16px system-ui, sans-serif; color: var(--cream); }
+.stepper-label small { display: block; font-weight: 400; font-size: 12px; color: var(--dim); margin-top: 2px; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper .step { width: 64px; min-height: 64px; padding: 0; font-size: 34px; line-height: 1; flex: none; }
+.step-val { flex: 1; text-align: center; font: 800 26px system-ui, sans-serif; background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 14px 6px; min-width: 90px; color: var(--cream); }
+.hall-sketch { width: 100%; max-height: 300px; background: #f6f2ea; border: 2px solid var(--line); border-radius: 10px; display: block; margin: 6px 0 4px; }
+
+@media (max-width: 1100px) { #desktop .design { grid-template-columns: 1fr; } #desktop .dt-frame { grid-template-columns: 170px 1fr; } }

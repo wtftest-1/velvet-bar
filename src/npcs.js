@@ -1,6 +1,6 @@
 // Stylised low-poly people with walk / sit / play animations, plus staff & performers.
 import * as THREE from 'three';
-import { groundY, STAGE, STAIRS } from './plan.js';
+import { groundY, STAGE, STAIRS, DIMS } from './plan.js';
 import { blobMat } from './furniture.js';
 
 const G = {};
@@ -147,11 +147,15 @@ export class Person {
 
 /** Staff posts and stage positions */
 const H = STAGE.h;
-export const STAGE_POS = {
+const BASE_POS = {
   piano: { x: -4.0, z: -6.2, y: H + 0.5, yaw: -Math.PI / 2, sit: true },
   drums: { x: 3.85, z: -5.35, y: H + 0.5, yaw: Math.PI, sit: true },
   bass: { x: -1.45, z: -5.35, yaw: 0 }, sax: { x: 1.1, z: -5.2, yaw: 0 }, vocal: { x: 0, z: -4.95, yaw: 0 }, trumpet: { x: 2.1, z: -5.3, yaw: 0 },
 };
+/** performers stand on the stage wherever it currently is (see plan.applyDims) */
+export const STAGE_POS = {};
+export function updateStagePos() { for (const [k, v] of Object.entries(BASE_POS)) STAGE_POS[k] = { ...v, z: v.z - DIMS.stage }; }
+updateStagePos();
 
 export class Crowd {
   constructor(scene, world, nav) { this.scene = scene; this.world = world; this.nav = nav; this.staff = []; this.performers = []; this.people = new Set(); }

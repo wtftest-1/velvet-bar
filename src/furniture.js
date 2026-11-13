@@ -7,12 +7,15 @@ import { BLD, ceilingY } from './plan.js';
 
 export const isWallItem = d => d.wall !== undefined;
 export const floorBase = f => (f === 1 ? BLD.F1 : 0);
+/** length along the item's own x axis (resizable partitions can be 1–12 m, everything else is fixed) */
+export const lenOf = (item, d = FURNITURE[item.k]) => (d.resize ? Math.max(d.resize[0], Math.min(d.resize[1], item.len ?? d.fp[0])) : d.fp[0]);
+export const partsOf = (d, item) => (typeof d.parts === 'function' ? d.parts(lenOf(item, d)) : d.parts);
 
 export function defaultMats(k) { const d = FURNITURE[k]; return Object.fromEntries(Object.keys(d.slots).map(s => [s, { id: d.defaults[s] }])); }
 
 /** footprint rect (world AABB) for an item */
 export function rectOf(item) {
-  const d = FURNITURE[item.k], odd = item.r % 2 !== 0, w = odd ? d.fp[1] : d.fp[0], h = odd ? d.fp[0] : d.fp[1];
+  const d = FURNITURE[item.k], L = lenOf(item, d), odd = item.r % 2 !== 0, w = odd ? d.fp[1] : L, h = odd ? L : d.fp[1];
   return { x0: item.x - w / 2, x1: item.x + w / 2, z0: item.z - h / 2, z1: item.z + h / 2 };
 }
 /** rects that block walking */
@@ -52,14 +55,14 @@ export function itemTransform(item) {
   return { x: item.x, y, z: item.z, ry: item.r * Math.PI / 2 };
 }
 
-export function matSig(item) { return JSON.stringify([item.k, item.f, item.x, item.z, item.r, item.m]); }
+export function matSig(item) { return JSON.stringify([item.k, item.f, item.x, item.z, item.r, item.m, item.len]); }
 
 /** Build the 3D group for an item. */
 export function buildItem(item) {
   ensureSpecial();
   const d = FURNITURE[item.k], g = new THREE.Group();
   let chain = null;
-  d.parts.forEach((p, idx) => {
+  partsOf(d, item).forEach((p, idx) => {
     let mat;
     if (p.slot.startsWith('@')) mat = furnMaterial(p.slot);
     else { const ch = item.m?.[p.slot]; mat = d.slots[p.slot] ? furnMaterial(p.slot, ch?.id ?? d.defaults[p.slot], ch?.color) : ARCH.black; }
@@ -75,7 +78,7 @@ export function buildItem(item) {
   const T = itemTransform(item);
   if (d.hang) { const by = T.y, top = ceilingY(item.f, item.z) - 0.02, L = top - by - 0.2; chain.scale.y = L; chain.position.y = 0.2 + L / 2; }
   else if (!d.walk && !isWallItem(d)) { // soft contact shadow under floor-standing items
-    const sh = new THREE.Mesh(new THREE.PlaneGeometry(d.fp[0] * 1.35, d.fp[1] * 1.35), blobMat()); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.012; sh.userData.noPick = true; g.add(sh);
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(lenOf(item, d) * 1.35, d.fp[1] * 1.35), blobMat()); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.012; sh.userData.noPick = true; g.add(sh);
   }
   g.rotation.y = T.ry; g.position.set(T.x, T.y, T.z);
   g.userData.itemId = item.id;

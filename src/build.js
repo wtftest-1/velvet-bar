@@ -3,9 +3,9 @@
 import * as THREE from 'three';
 import { h } from './ui/dom.js';
 import { FURNITURE, SURFACES, SURFACE_LABELS } from './data/catalog.js';
-import { itemTransform, buildItem, isWallItem } from './furniture.js';
-import { snap, snapWall, validity, buyItem, sellItem } from './placement.js';
-import { materialEditor, thumbImg } from './ui/widgets.js';
+import { itemTransform, buildItem, isWallItem, lenOf } from './furniture.js';
+import { snap, snapWall, validity, buyItem, sellItem, priceOf } from './placement.js';
+import { materialEditor, thumbImg, dimsPanel, resizePanel, stepper } from './ui/widgets.js';
 import { ARCH } from './materials.js';
 import { fmt } from './state.js';
 
@@ -24,7 +24,7 @@ export class BuildMode {
     this.tool = 'select'; this.cat = 'All'; this.selId = null; this.placing = null; this.ghost = null; this.drag = null; this.paintId = 'planks'; this.looking = false; this.hint = '';
     this.hl = new THREE.Box3Helper(new THREE.Box3(), 0xffd166); this.hl.visible = false; ctx.world.scene.add(this.hl);
     this.ghostMat = new THREE.MeshBasicMaterial({ color: 0x7fd39a, transparent: true, opacity: 0.5, depthWrite: false });
-    this.h = { down: e => this.onDown(e), move: e => this.onMove(e), up: () => this.onUp(), ctxm: e => e.preventDefault(), key: e => this.onKey(e) };
+    this.h = { down: e => this.onDown(e), move: e => this.onMove(e), up: () => this.onUp(), ctxm: e => e.preventDefault(), key: e => this.onKey(e), guard: e => { e.preventDefault(); e.returnValue = ''; }, blur: () => { this.looking = false; } };
   }
   get s() { return this.ctx.state; }
   byId(id) { return this.s.items.find(i => i.id === id); }
@@ -36,19 +36,23 @@ export class BuildMode {
     this.tool = 'select'; this.selId = null; this.placing = null;
     this.root = h('div', { id: 'build' }); document.getElementById('app').append(this.root);
     const c = this.canvas; c.addEventListener('pointerdown', this.h.down); c.addEventListener('pointermove', this.h.move); window.addEventListener('pointerup', this.h.up); c.addEventListener('contextmenu', this.h.ctxm); window.addEventListener('keydown', this.h.key);
+    // Safety net: a stray Ctrl+W / Backspace / back-swipe while flying asks before leaving the page, and the context menu never pops up over the 3D view.
+    window.addEventListener('beforeunload', this.h.guard); window.addEventListener('blur', this.h.blur); window.addEventListener('contextmenu', this.h.ctxm);
     this.render();
   }
   exit() {
     if (!this.active) return; this.active = false; const p = this.ctx.player, c = this.canvas;
     c.removeEventListener('pointerdown', this.h.down); c.removeEventListener('pointermove', this.h.move); window.removeEventListener('pointerup', this.h.up); c.removeEventListener('contextmenu', this.h.ctxm); window.removeEventListener('keydown', this.h.key);
+    window.removeEventListener('beforeunload', this.h.guard); window.removeEventListener('blur', this.h.blur); window.removeEventListener('contextmenu', this.h.ctxm);
     this.clearGhost(); this.hl.visible = false; this.root.remove(); p.fly = false; p.teleport(this.saved.x, this.saved.z, this.saved.yaw, this.saved.floor); p.pitch = this.saved.pitch; p.disable();
   }
-  /** Esc: returns true when it consumed the key */
+  /** Esc: cancels placement / deselects / leaves paint. It never leaves build mode by itself (use the Exit button), so Esc can't throw you out while flying. */
   escape() {
     if (this.placing) { this.placing = null; this.clearGhost(); this.say('Placement cancelled.'); this.render(); return true; }
     if (this.selId != null) { this.selId = null; this.render(); return true; }
     if (this.tool === 'paint') { this.tool = 'select'; this.render(); return true; }
-    return false;
+    this.say('Press the red “Exit build mode” button to go back to the computer.');
+    return true;
   }
 
   // ── ray helpers ───────────────────────────────────────────────────────────
@@ -92,6 +96,7 @@ export class BuildMode {
   }
   onKey(e) {
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if (['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     if (e.code === 'KeyR') { this.rotate(); e.preventDefault(); }
     else if (e.code === 'Delete' || e.code === 'Backspace') { this.sell(); e.preventDefault(); }
   }
@@ -107,15 +112,16 @@ export class BuildMode {
     const it = this.byId(this.selId); if (!it) return; const name = FURNITURE[it.k].name, refund = sellItem(this.ctx, it);
     this.selId = null; this.ctx.toast(`Sold ${name}: ${fmt(refund)} back (50%).`); this.render();
   }
-  startPlacing(k) { this.placing = { k, r: 0 }; this.selId = null; this.say(isWallItem(FURNITURE[k]) ? 'Move to a wall and click. Esc cancels.' : 'Click to place. R rotates. Esc cancels.'); this.clearGhost(); this.render(); }
+  startPlacing(k) { this.placing = { k, r: 0, len: FURNITURE[k].fp[0] }; this.selId = null; this.say(isWallItem(FURNITURE[k]) ? 'Move to a wall and click. Esc cancels.' : 'Click to place. R rotates. Esc cancels.'); this.clearGhost(); this.render(); }
   clearGhost() { if (this.ghost) { this.ctx.world.mirror.remove(this.ghost.group); this.ghost.group.traverse(o => o.geometry?.dispose()); this.ghost = null; } }
   updateGhost(e) {
     const k = this.placing.k, d = FURNITURE[k], hit = this.floorHit(e, !isWallItem(d)); if (!hit) return;
-    const it = { id: -1, k, f: hit.point.y > 2.5 ? 1 : 0, x: hit.point.x, z: hit.point.z, r: this.placing.r, m: {} };
+    const it = { id: -1, k, f: hit.point.y > 2.5 ? 1 : 0, x: hit.point.x, z: hit.point.z, r: this.placing.r, m: {}, len: this.placing.len };
     if (isWallItem(d)) snapWall(it, hit.point.x, hit.point.z); else { it.x = snap(hit.point.x); it.z = snap(hit.point.z); }
-    if (!this.ghost || this.ghost.key !== k + it.r) { this.clearGhost(); const g = buildItem(it); g.traverse(o => { if (o.isMesh) o.material = this.ghostMat; }); this.ctx.world.mirror.add(g); this.ghost = { group: g, key: k + it.r }; }
+    const gk = k + it.r + '/' + it.len;
+    if (!this.ghost || this.ghost.key !== gk) { this.clearGhost(); const g = buildItem(it); g.traverse(o => { if (o.isMesh) o.material = this.ghostMat; }); this.ctx.world.mirror.add(g); this.ghost = { group: g, key: gk }; }
     const T = itemTransform(it); this.ghost.group.position.set(T.x, T.y, T.z); this.ghost.group.rotation.y = T.ry; this.ghost.item = it;
-    const v = validity(this.s, it); this.ghostMat.color.set(v === true ? 0x7fd39a : 0xff7a6b); this.ghost.ok = v === true; this.say(v === true ? `${d.name}: click to buy for ${fmt(d.price)}.` : v);
+    const v = validity(this.s, it); this.ghostMat.color.set(v === true ? 0x7fd39a : 0xff7a6b); this.ghost.ok = v === true; this.say(v === true ? `${d.name}: click to buy for ${fmt(priceOf(it))}.` : v);
   }
   tryPlace() {
     if (!this.ghost?.item) return; const r = buyItem(this.ctx, this.ghost.item);
@@ -138,33 +144,37 @@ export class BuildMode {
 
   // ── panel ─────────────────────────────────────────────────────────────────
   render() {
-    const tabs = h('div', { class: 'seg', role: 'group', 'aria-label': 'Build tool' }, [['select', 'Select'], ['place', 'Furniture'], ['paint', 'Paint']].map(([t, l]) =>
+    const tabs = h('div', { class: 'seg', role: 'group', 'aria-label': 'Build tool' }, [['select', 'Select / move'], ['place', 'Buy furniture'], ['paint', 'Paint'], ['building', 'Building size']].map(([t, l]) =>
       h('button', { class: 'btn', type: 'button', 'aria-pressed': String((t === 'place' ? this.tool === 'place' || !!this.placing : this.tool === t) && !(t !== 'place' && this.placing)), onclick: () => { this.tool = t; this.placing = null; this.clearGhost(); this.render(); } }, l)));
     this.cashEl = h('b', null, fmt(this.s.fin.cash)); this.hintEl = h('div', { class: 'legend', role: 'status', 'aria-live': 'polite' }, this.hint);
     const body = h('div', { class: 'bd-body' });
     if (this.tool === 'select' && !this.placing) body.append(...this.selectPanel());
+    else if (this.tool === 'building') body.append(dimsPanel(this.ctx, () => this.render()));
     else if (this.tool === 'paint') body.append(...this.paintPanel());
-    else body.append(...this.furniturePanel());
+    else body.append(...this.furniturePanel().filter(Boolean));
     this.root.replaceChildren(h('div', { class: 'bd-panel' },
       h('div', { class: 'row', style: { margin: 0, justifyContent: 'space-between' } }, h('h2', { class: 'app-h', style: { fontSize: '20px', margin: 0 } }, 'Build mode'), h('span', null, 'Cash ', this.cashEl)),
       tabs, body, this.hintEl,
-      h('div', { class: 'legend' }, h('kbd', null, 'WASD'), ' fly · ', h('kbd', null, 'Q'), '/', h('kbd', null, 'E'), ' down/up · ', h('kbd', null, 'Shift'), ' fast · hold ', h('kbd', null, 'right mouse'), ' to look · ', h('kbd', null, 'R'), ' rotate · ', h('kbd', null, 'Del'), ' sell'),
-      h('button', { class: 'btn gold', type: 'button', onclick: () => this.ctx.exitBuild() }, '← Back to the computer (Esc)')));
+      h('div', { class: 'legend' }, h('kbd', null, 'WASD'), ' fly · ', h('kbd', null, 'Q'), '/', h('kbd', null, 'E'), ' down/up · ', h('kbd', null, 'Shift'), ' fast · hold ', h('kbd', null, 'right mouse'), ' to look · ', h('kbd', null, 'R'), ' rotate · ', h('kbd', null, 'Del'), ' sell · ', h('kbd', null, 'Esc'), ' cancel / deselect'),
+      h('button', { class: 'btn danger big', type: 'button', onclick: () => this.ctx.exitBuild() }, '✕ Exit build mode')));
   }
   selectPanel() {
     const it = this.byId(this.selId);
     if (!it) return [h('div', { class: 'panel' }, h('h3', null, 'Select & move'), h('div', { class: 'legend' }, 'Click any piece of furniture to select it, then drag it to move. Recolour it here, rotate with R, sell with Del. Use the Furniture tab to buy more (with 3D previews), Paint to restyle walls and floors, and Rooms → partition walls to build new rooms.'))];
     const d = FURNITURE[it.k];
     return [h('div', { class: 'panel' }, h('div', { style: { display: 'flex', gap: '10px' } }, thumbImg(this.ctx, it.k), h('div', null, h('h3', null, d.name), h('div', { class: 'muted' }, `${it.f ? 'Upper' : 'Ground'} floor`, h('br'), `paid ${fmt(it.cost)}`))),
-      h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', onclick: () => { this.rotate(); this.render(); } }, 'Rotate (R)'), h('button', { class: 'btn small danger', type: 'button', onclick: () => this.sell() }, `Sell +${fmt(it.cost * 0.5)}`))),
+      h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', onclick: () => { this.rotate(); this.render(); } }, '⟳ Rotate (R)'), h('button', { class: 'btn danger', type: 'button', onclick: () => this.sell() }, `Sell +${fmt(it.cost * 0.5)}`))),
+      resizePanel(this.ctx, it, () => this.render()),
       materialEditor(this.ctx, it, () => this.render())].filter(Boolean);
   }
   furniturePanel() {
     const rows = Object.entries(FURNITURE).filter(([, d]) => this.cat === 'All' || d.cat === this.cat).map(([k, d]) =>
       h('div', { class: 'thumbcard' + (this.placing?.k === k ? ' on' : '') }, thumbImg(this.ctx, k),
-        h('div', { style: { flex: 1, minWidth: 0 } }, h('b', null, d.name), h('div', { class: 'muted' }, `${d.fp[0]}×${d.fp[1]} m${d.seats ? ' · ' + d.seats.length + ' seats' : ''}`), h('div', { class: 'p' }, fmt(d.price))),
-        h('button', { class: 'btn small gold', type: 'button', 'aria-label': `Place ${d.name}`, onclick: () => { this.tool = 'place'; this.startPlacing(k); } }, 'Place')));
-    return [h('div', { class: 'seg', role: 'group', 'aria-label': 'Category', style: { flexWrap: 'wrap', marginBottom: '8px' } }, CATS.map(c => h('button', { class: 'btn small', type: 'button', 'aria-pressed': String(this.cat === c), onclick: () => { this.cat = c; this.render(); } }, c))), ...rows];
+        h('div', { style: { flex: 1, minWidth: 0 } }, h('b', null, d.name), h('div', { class: 'muted' }, `${d.fp[0]}×${d.fp[1]} m${d.seats ? ' · ' + d.seats.length + ' seats' : ''}`), h('div', { class: 'p' }, d.resize ? `${fmt(d.price)} per ${d.fp[0]} m` : fmt(d.price))),
+        h('button', { class: 'btn gold', type: 'button', 'aria-label': `Place ${d.name}`, onclick: () => { this.tool = 'place'; this.startPlacing(k); } }, 'Place')));
+    const pk = this.placing && FURNITURE[this.placing.k];
+    const sizer = pk?.resize ? h('div', { class: 'panel' }, stepper('Length', `${lenOf(this.placing, pk)} m`, { hint: `price ${fmt(priceOf(this.placing))}`, canDown: this.placing.len > pk.resize[0], canUp: this.placing.len < pk.resize[1], onDown: () => { this.placing.len = Math.max(pk.resize[0], this.placing.len - 0.5); this.render(); }, onUp: () => { this.placing.len = Math.min(pk.resize[1], this.placing.len + 0.5); this.render(); } })) : null;
+    return [sizer,h('div', { class: 'seg', role: 'group', 'aria-label': 'Category', style: { flexWrap: 'wrap', marginBottom: '8px' } }, CATS.map(c => h('button', { class: 'btn small', type: 'button', 'aria-pressed': String(this.cat === c), onclick: () => { this.cat = c; this.render(); } }, c))), ...rows];
   }
   paintPanel() {
     return [h('div', { class: 'legend', style: { marginBottom: '8px' } }, '1) Pick a finish. 2) Click a wall, floor or ceiling in the room. Each area (main hall, foyer, VIP floors, main walls, VIP walls, ceiling) is repainted as a whole.'),

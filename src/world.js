@@ -1,6 +1,6 @@
 // The building shell, lighting, furniture sync and pin markers.
 import * as THREE from 'three';
-import { BLD, STAIRS, RAIL, TERRACE2, WINDOW, walls, staticRects, INNER } from './plan.js';
+import { BLD, DIMS, STAIRS, RAIL, TERRACE2, WINDOW, walls, staticRects, INNER } from './plan.js';
 import { ARCH, makeEnvironment, initMaterials } from './materials.js';
 import { box, cyl, flat, vplane, group, retile, sph } from './gfx.js';
 import { SURFACES } from './data/catalog.js';
@@ -18,13 +18,27 @@ export class World {
     this.mirror = group(scene); this.mirror.scale.x = -1;
     this.root = group(this.mirror); this.furn = group(this.mirror); this.pinsG = group(this.mirror);
     this.itemObjs = new Map(); this.seats = []; this.dyn = [[], []]; this.rects = [staticRects(0), staticRects(1)];
-    this.layoutVersion = 0; this.pinMarkers = []; this.surf = {};
+    this.layoutVersion = 0; this.pinMarkers = []; this.surf = {}; this.lightsG = group(this.mirror);
     this.buildLights(); this.buildShell(); this.buildExterior();
     this.fx = buildFixtures(this);
   }
 
+  /** Rebuild shell, exterior, lights and fixtures after plan.applyDims() changed the hall length / stage distance. Furniture, pins and the door state are kept. */
+  rebuildArchitecture() {
+    const old = this.fx; old.disposers?.forEach(fn => fn());
+    for (const g of [this.root, this.lightsG]) { g.traverse(o => o.geometry?.dispose()); g.clear(); }
+    this.surf = {};
+    this.buildLights(); this.buildShell(); this.buildExterior();
+    const fx = buildFixtures(this);
+    for (const [k, v] of Object.entries(old.anchors)) if (fx.anchors[k]) v.copy(fx.anchors[k]); // keep the Vector3s main.js captured
+    fx.anchors = old.anchors;
+    Object.assign(fx.door, { open: old.door.open, target: old.door.target, ang: old.door.ang });
+    this.fx = fx;
+    this.rects = [[...staticRects(0), ...this.dyn[0]], [...staticRects(1), ...this.dyn[1]]]; this.layoutVersion++;
+  }
+
   buildLights() {
-    const add = l => { this.mirror.add(l); return l; };
+    const add = l => { this.lightsG.add(l); return l; };
     add(new THREE.HemisphereLight(0xffd4aa, 0x3a1c18, 1.05));
     const pl = (x, y, z, c, i, d) => { const l = new THREE.PointLight(c, i, d, 2); l.position.set(x, y, z); add(l); return l; };
     pl(0, 2.4, 5.6, 0xffb870, 26, 13);        // foyer
@@ -37,26 +51,27 @@ export class World {
     pl(0.3, 6.7, 4.5, 0xffa860, 28, 10);      // VIP lounge (centre)
     pl(-8.5, 6.6, 2.6, 0xff9a50, 24, 9);      // cigar room + dining
     pl(9.0, 6.5, 2.8, 0xffb878, 28, 9);       // office
-    const spot = (x, tx) => { const l = new THREE.SpotLight(0xffd8a8, 180, 16, 0.6, 0.65, 2); l.position.set(x, 6.7, -2.6); l.target.position.set(tx, 0.45, -6.2); add(l); add(l.target); };
+    const spot = (x, tx) => { const l = new THREE.SpotLight(0xffd8a8, 180, 16, 0.6, 0.65, 2); l.position.set(x, 6.7, -2.6 - DIMS.stage); l.target.position.set(tx, 0.45, -6.2 - DIMS.stage); add(l); add(l.target); };
     spot(-3.5, -2.5); spot(3.5, 2.5);
+    for (let z = -11; z > BLD.Z0 + 1.5; z -= 8) pl(0, 5.2, z, 0xffa860, 34, 14); // extra hall fill when the hall is longer
   }
 
   buildShell() {
-    const R = this.root, H = BLD.H, F1 = BLD.F1;
+    const R = this.root, H = BLD.H, F1 = BLD.F1, Z0 = BLD.Z0;
     for (const k of ['checker', 'carpet', 'marbleBlack', 'parquet']) { ARCH[k].polygonOffset = true; ARCH[k].polygonOffsetFactor = -2; ARCH[k].polygonOffsetUnits = -2; }
     const tag = (k, m) => { (this.surf[k] ??= []).push(m); m.userData.surfKey = k; return m; };
     // ground floor
-    tag('floorMain', flat(R, ARCH.parquet, -12, 12, -8, 8, 0));
+    tag('floorMain', flat(R, ARCH.parquet, -12, 12, Z0, 8, 0));
     tag('floorFoyer', flat(R, ARCH.checker, -7.5, 7.5, 4, 8, 0.004));
     flat(R, ARCH.marbleBlack, 7.5, 12, 4, 8, 0.004); flat(R, ARCH.marbleBlack, -12, -7.5, 4, 8, 0.004);
     flat(R, ARCH.marbleBlack, 10.7, 11.85, -5.6, 3.9, 0.004);
-    flat(R, ARCH.carpet, -1.4, 1.4, -4.5, 4, 0.006);
+    flat(R, ARCH.carpet, -1.4, 1.4, -4.5 - DIMS.stage, 4, 0.006);
     // ceilings, slab, beams
-    tag('ceiling', flat(R, ARCH.tin, -12, 12, -8, 8, H, false));
+    tag('ceiling', flat(R, ARCH.tin, -12, 12, Z0, 8, H, false));
     tag('ceiling', box(R, ARCH.tin, 24, 0.3, 8, 0, BLD.CEIL0, 4));
     box(R, ARCH.brass, 24, 0.05, 0.05, 0, BLD.CEIL0, 0.02);
-    for (const x of [-9, -4.5, 0, 4.5, 9]) box(R, ARCH.panel, 0.35, 0.4, 8, x, H - 0.4, -4);
-    for (const z of [-6, -2]) box(R, ARCH.panel, 24, 0.3, 0.3, 0, H - 0.3, z);
+    for (const x of [-9, -4.5, 0, 4.5, 9]) box(R, ARCH.panel, 0.35, 0.4, -Z0, x, H - 0.4, Z0 / 2);
+    for (let z = -2; z > Z0 + 1; z -= 4) box(R, ARCH.panel, 24, 0.3, 0.3, 0, H - 0.3, z);
     // upper floors
     const up = (m, x0, x1, z0, z1) => { const mm = flat(R, m, x0, x1, z0, z1, F1 + 0.003); if (m !== ARCH.marbleBlack) tag('floorVip', mm); return mm; };
     up(ARCH.carpet, -5.5, 6, 0, 8); up(ARCH.parquet, -12, -5.5, 0, 8);
@@ -112,11 +127,11 @@ export class World {
     // facade cladding (visual only), leaving the entrance open
     for (const s of [-1, 1]) {
       box(R, brick, 10.85, H, 0.14, s * 6.725, 0, 8.22); box(R, ARCH.marbleBlack, 10.9, 0.9, 0.3, s * 6.7, 0, 8.3);
-      box(R, brick, 0.14, H, 16.4, s * 12.22, 0, 0);
+      box(R, brick, 0.14, H, 16.4 + DIMS.hall, s * 12.22, 0, BLD.Z0 / 2);
     }
-    box(R, brick, 2.6, H - 2.6, 0.14, 0, 2.6, 8.22); box(R, brick, 24.6, H, 0.14, 0, 0, -8.22);
+    box(R, brick, 2.6, H - 2.6, 0.14, 0, 2.6, 8.22); box(R, brick, 24.6, H, 0.14, 0, 0, BLD.Z0 - 0.22);
     box(R, ARCH.gold, 25, 0.3, 0.5, 0, H, 8.28); box(R, ARCH.brass, 25, 0.12, 0.6, 0, H + 0.3, 8.3);
-    box(R, ARCH.plaster, 24.6, 0.25, 16.6, 0, H, 0);
+    box(R, ARCH.plaster, 24.6, 0.25, 16.6 + DIMS.hall, 0, H, BLD.Z0 / 2);
     // glowing windows
     const glow = new THREE.MeshBasicMaterial({ color: 0xb27a34 }), glowP = new THREE.MeshBasicMaterial({ color: 0x8a4a62 });
     const win = (x, y, w, h, m) => { vplane(R, m, w, h, x, y, 8.3); for (const [dx, dy, ww, hh] of [[0, h / 2, w + 0.16, 0.08], [0, -h / 2, w + 0.16, 0.08], [-w / 2, 0, 0.08, h], [w / 2, 0, 0.08, h], [0, 0, 0.05, h]]) box(R, ARCH.brass, ww, hh, 0.1, x + dx, y + dy - hh / 2, 8.31); };

@@ -1,5 +1,6 @@
 // Bootstrap: renderer, modes (menu / play / pause / desktop / pin / report), HUD, interactions, main loop.
 import './style.css';
+import './light.css';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -10,7 +11,11 @@ import { BuildMode } from './build.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { Nav } from './nav.js';
-import { Crowd } from './npcs.js';
+import * as plan from './plan.js';
+import * as placement from './placement.js';
+import { applyDims, DIMS } from './plan.js';
+import { changeDims } from './placement.js';
+import { Crowd, updateStagePos } from './npcs.js';
 import { Sim } from './sim.js';
 import { JazzAudio } from './audio.js';
 import { Desktop } from './ui/desktop.js';
@@ -51,6 +56,7 @@ composer.addPass(new ShaderPass({
 
 // ── state & systems ─────────────────────────────────────────────────────────
 const state = loadState() ?? newState(); state.quality ??= 'auto';
+applyDims(state.dims.hall, state.dims.stage); updateStagePos(); // the building's size must be known before the world is built
 const audio = new JazzAudio(state.music);
 const world = new World(scene, renderer);
 const nav = new Nav();
@@ -76,6 +82,15 @@ const ctx = {
   setName(n) { state.name = n || 'The Velvet Note'; world.fx.setName(state.name); $('#h-name').textContent = state.name; document.title = state.name + ' · Jazz Bar'; saveSoon(state); },
   setArt(src) { state.art = src; world.fx.setArt(src); saveSoon(state); },
   setSurface(key, id) { state.surfaces[key] = id; world.setSurface(key, id); saveSoon(state); },
+  /** change hall length / stage distance; returns {ok} or {error} (an error changes nothing) */
+  setDims(hall, stage) {
+    const r = changeDims(ctx, hall, stage); if (r.error) { toast(r.error, true); return r; } if (r.same) return r;
+    state.dims = { hall: DIMS.hall, stage: DIMS.stage };
+    world.rebuildArchitecture(); nav.resize(); updateStagePos();
+    world.syncFurniture(state.items); nav.rebuild(world.rects); world.applySurfaces(state.surfaces); world.fx.setName(state.name); world.fx.setArt(state.art);
+    const staff = state.staff; crowd.syncStaff(Object.fromEntries(Object.keys(staff).map(k => [k, 0]))); crowd.syncStaff(staff); crowd.syncPerformers(sim.night?.act ?? null);
+    saveSoon(state); return r;
+  },
   setQuality(q) { state.quality = q; applyQuality(q === 'auto' ? 'high' : q); saveSoon(state); }, closeDesktop: () => closeDesktop(), enterBuild: () => enterBuild(), exitBuild: () => exitBuild(),
   setPref(k, v) { state.prefs[k] = v; player[k] = v; for (const [id, kk] of [['inv-x', 'invX'], ['inv-y', 'invY']]) if (kk === k) $('#' + id).checked = v; saveSoon(state); },
   exportSave: () => JSON.stringify(state),
@@ -166,7 +181,7 @@ const typing = e => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName);
 window.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     if (!$('#report').hidden) { closeReport(); return; }
-    if (mode === 'build') { if (!build.escape()) exitBuild(); e.preventDefault(); return; }
+    if (mode === 'build') { build.escape(); e.preventDefault(); return; }
     if (mode === 'desktop') { if (!desktop.escape()) closeDesktop(); e.preventDefault(); return; }
     if (mode === 'pin') { endPin(false); return; }
     if (mode === 'play' && !player.locked) setMode('pause');
@@ -255,5 +270,5 @@ applyQuality(state.quality === 'auto' ? 'high' : state.quality);
 setMode('menu'); frame();
 
 // debugging / test handle
-window.__vn = { applyQuality, build, composer, state, sim, world, player, crowd, nav, audio, ctx, desktop, THREE, setMode: m => setMode(m), openDesktop, renderer, camera, get mode() { return mode; } };
+window.__vn = { plan, placement, applyQuality, build, composer, state, sim, world, player, crowd, nav, audio, ctx, desktop, THREE, setMode: m => setMode(m), openDesktop, renderer, camera, get mode() { return mode; } };
 void GUESTS;
