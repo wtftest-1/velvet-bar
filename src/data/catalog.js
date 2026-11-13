@@ -339,7 +339,7 @@ export const GUESTS = [
 ];
 
 export const CONFIG = {
-  startCash: 60000, rentPerDay: 420, utilitiesPerNight: 85, depreciationYears: 5,
+  startCash: 60000, rentPerDay: 260, utilitiesPerNight: 60, depreciationYears: 15,
   nightMinutes: 360, startRep: 25, refundRate: 0.5, maxVisualGuests: 48,
 };
 

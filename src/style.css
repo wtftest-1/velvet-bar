@@ -93,3 +93,8 @@ input[type=color] { width: 40px; height: 26px; padding: 0; border: 1px solid var
 .cat-item .thumb { width: 52px; height: 52px; }
 
 .ov-opts { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; margin: 4px 0 8px; } .ov-opts label { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 12px; color: var(--cream); cursor: pointer; } .ov-opts input { accent-color: var(--gold); width: 16px; height: 16px; }
+
+/* first-run guide */
+#guide { position: absolute; left: 12px; top: 74px; max-width: 340px; padding: 10px 14px; background: rgba(20,4,10,.78); border: 1px solid var(--gold2); border-radius: 6px; font-size: 12px; line-height: 1.5; box-shadow: 0 6px 24px rgba(0,0,0,.45); }
+#guide ul { margin: 6px 0; padding-left: 0; list-style: none; } #guide li { margin: 4px 0; color: var(--dim); }
+#guide li.done { opacity: .5; text-decoration: line-through; } #guide li.now { color: var(--gold); font-weight: 700; }

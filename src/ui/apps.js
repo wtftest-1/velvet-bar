@@ -19,12 +19,16 @@ export function dashboard(ctx, api) {
   const speed = h('div', { class: 'seg', role: 'group', 'aria-label': 'Game speed' }, [1, 2, 4].map(v => h('button', { class: 'btn', type: 'button', 'data-s': v, 'aria-pressed': String(s.speed === v), onclick: () => { s.speed = v; ctx.save(); update(); } }, v + '×')));
   const skip = h('button', { class: 'btn', type: 'button', onclick: () => { if (sim.skipDay()) { api.refresh(); } } }, 'Skip to next day');
   const tonight = h('div'), last = h('div');
+  const autoBtn = h('button', { class: 'btn big', type: 'button', onclick: () => { ctx.setAuto(!s.auto.on); update(); } });
+  const autoPanel = h('div', { class: 'panel', style: { marginBottom: '14px' } }, h('h3', null, 'Autopilot'),
+    h('p', { class: 'muted', style: { margin: '0 0 10px' } }, 'The bar staffs itself (a bartender and a waiter), books an act you can afford, opens every evening and just keeps going. Reports arrive as a quiet message. You can still change anything at any time.'), autoBtn);
   const update = () => {
     const n = sim.night, st = sim.stats();
     R.clock.val.textContent = n ? clockStr(n.min) + ' · OPEN' : `Day ${s.day} ${dayName(s.day)} · CLOSED`;
     R.cash.val.textContent = fmt(s.fin.cash); R.rev.val.textContent = fmt(st.revenue); R.guests.val.textContent = n ? `${st.inBar} in · ${st.guests} total` : '—';
     R.rep.val.textContent = s.rep.toFixed(0) + ' / 100'; R.hype.val.textContent = sim.hype().toFixed(0) + ' / 100';
     openBtn.textContent = n ? 'Close the bar (end the night)' : 'Open the bar for tonight'; skip.disabled = !!n;
+    autoBtn.textContent = s.auto.on ? '✓ Autopilot is ON (click to turn off)' : 'Turn on Autopilot'; autoBtn.className = 'btn big ' + (s.auto.on ? 'gold' : '');
     for (const b of speed.children) b.setAttribute('aria-pressed', String(s.speed === +b.dataset.s));
     const act = sim.actFor(s.day), ev = sim.eventOn(s.day), tips = [];
     if (!s.staff.bartender) tips.push('No bartender: service will be slow.'); if (!s.staff.security) tips.push('No security: you cannot invite guests to the VIP floor.');
@@ -39,6 +43,7 @@ export function dashboard(ctx, api) {
   };
   api.live(update); update();
   return page('Dashboard', 'Run the bar from here. The night runs 20:00 → 02:00 (about 6 real minutes at 1×). Close this computer (Esc) to walk the floor while it runs.',
+    autoPanel,
     h('div', { class: 'grid g3' }, R.clock, R.cash, R.rev, R.guests, R.rep, R.hype),
     h('div', { class: 'row', style: { margin: '16px 0' } }, openBtn, h('span', { class: 'muted' }, 'Speed'), speed, skip),
     h('div', { class: 'grid g2' }, h('div', { class: 'panel' }, tonight), h('div', { class: 'panel' }, last)));

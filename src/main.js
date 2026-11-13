@@ -64,7 +64,7 @@ const crowd = new Crowd(world.mirror, world, nav);
 const player = new Player(camera, canvas, world); player.yaw = 0;
 state.prefs ??= { invX: false, invY: false }; player.invX = !!state.prefs.invX; player.invY = !!state.prefs.invY;
 for (const [id, k] of [['inv-x', 'invX'], ['inv-y', 'invY']]) { const el = $('#' + id); el.checked = !!state.prefs[k]; el.addEventListener('change', () => { state.prefs[k] = el.checked; player[k] = el.checked; saveSoon(state); }); }
-let resetting = false;
+let resetting = false, autoT = 2;
 
 const toast = (msg, bad = false) => {
   const box = $('#toasts'), t = h('div', { class: 'toast' + (bad ? ' bad' : '') }, msg); box.append(t);
@@ -96,7 +96,9 @@ const ctx = {
   exportSave: () => JSON.stringify(state),
   importSave(text) { const s = JSON.parse(text); if (!s || s.v !== 1 || !Array.isArray(s.items) || !s.fin) throw new Error('That is not a Velvet Note save file.'); resetting = true; localStorage.setItem(SAVE_KEY, JSON.stringify(s)); location.reload(); },
   resetGame() { resetting = true; resetSave(); location.reload(); },
-  onReport: rep => showReport(rep),
+  /** autopilot: the bar opens itself every night and the report is a gentle toast instead of a blocking screen */
+  setAuto(on) { state.auto.on = !!on; autoT = 1; saveSoon(state); toast(on ? 'Autopilot on: the bar will run itself every night. Just wander and enjoy.' : 'Autopilot off: you open the bar yourself.'); },
+  onReport: rep => { if (state.auto.on) { toast(`Night ${rep.day}: ${rep.guests} guests, ${rep.net >= 0 ? 'profit' : 'loss'} ${fmt(Math.abs(rep.net))}. Reputation ${rep.rep.toFixed(0)}/100.`, false); autoT = 8; } else showReport(rep); },
 };
 ctx.sim = new Sim(ctx); const sim = ctx.sim;
 const desktop = new Desktop($('#desktop'), ctx);
@@ -122,11 +124,12 @@ function setMode(m) {
 function startPlay() { audio.start(); setMode('play'); player.lock(); canvas.focus(); }
 $('#ov-btn').addEventListener('click', startPlay);
 canvas.addEventListener('click', () => { if (mode === 'play' && !player.locked) player.lock(); });
+player.onLockError = () => toast('Your browser blocked mouse capture, so drag with the mouse to look around.');
 player.onLockChange = locked => { if (!locked && mode === 'play') setMode('pause'); };
 window.addEventListener('pointerdown', () => audio.start(), { once: false, passive: true });
 window.addEventListener('keydown', () => audio.start(), { passive: true });
 
-function openDesktop() { player.unlock(); setMode('desktop'); desktop.open(); }
+function openDesktop() { seen.computer = true; player.unlock(); setMode('desktop'); desktop.open(); }
 function enterBuild() { desktop.close(); player.unlock(); setMode('build'); build.enter(); toast('Build mode: fly with WASD, drag empty space to look, click furniture to edit.'); }
 function exitBuild() { build.exit(); setMode('desktop'); desktop.open('design'); }
 function closeDesktop() { desktop.close(); setMode('play'); player.lock(); canvas.focus(); }
@@ -192,6 +195,10 @@ window.addEventListener('keydown', e => {
   if (mode === 'play') {
     if (e.code === 'KeyE') useInteract();
     else if (e.code === 'KeyP') { e.preventDefault(); startPin(); }
+    else if (e.code === 'KeyO') { if (sim.night) toast('The bar is already open.'); else { sim.openBar(); hudT = 0; } }   // one-key "open the bar"
+    else if (e.code === 'KeyH') toggleGuide();
+    else if (e.code === 'KeyT') ctx.setAuto(!state.auto.on);
+    else if (/^Digit[123]$/.test(e.code)) { state.speed = [1, 2, 4][+e.code.slice(5) - 1]; saveSoon(state); toast(`Game speed ${state.speed}×`); }
   }
 });
 
@@ -234,6 +241,30 @@ function hud() {
   const st = $('#h-state'); st.textContent = n ? 'OPEN' : 'CLOSED'; st.className = 'pill ' + (n ? 'open' : 'closed');
   $('#h-cash').textContent = 'Cash ' + fmt(state.fin.cash);
   $('#h-guests').textContent = n ? `Guests ${sim.stats().inBar}` : `Rep ${state.rep.toFixed(0)}/100`;
+  $('#h-auto').hidden = !state.auto.on;
+  guideTick();
+}
+
+// ── first-run guide: a gentle checklist that ticks itself off (H hides it) ───
+const seen = {};
+let guideKey = '';
+if (state.day > 1 || state.lastReport) state.guide.hidden = true; // not for an existing bar
+function toggleGuide() { state.guide.hidden = !state.guide.hidden; guideKey = ''; saveSoon(state); toast(state.guide.hidden ? 'Tips hidden (press H to show them again).' : 'Tips shown.'); }
+function guideTick() {
+  const el = $('#guide'); if (state.guide.hidden || mode !== 'play') { el.hidden = true; return; }
+  if (world.fx.door.open) seen.door = true;
+  if (player.floor === 1 && player.x > 6) seen.office = true;
+  const steps = [
+    ['Easiest: press T to switch on Autopilot. The bar then runs itself every night.', state.auto.on],
+    ['Or run it yourself: walk to the bookshelf on the left near the stage and press E.', !!seen.door || state.auto.on],
+    ['Climb the secret stairs to your office upstairs.', !!seen.office || state.auto.on],
+    ['Press E at the computer on the desk and open the bar.', !!seen.computer || state.auto.on],
+    ['Close the computer (Esc) and wander. A night lasts about 6 minutes: 1 / 2 / 3 change the speed.', (sim.night?.min ?? 0) > 20 || !!state.lastReport],
+  ];
+  if (steps.every(s => s[1])) { state.guide.hidden = true; saveSoon(state); el.hidden = true; toast('That is everything you need. Enjoy the evening.'); return; }
+  const now = steps.findIndex(s => !s[1]), key = steps.map(s => +s[1]).join('');
+  if (key !== guideKey) { guideKey = key; el.replaceChildren(h('b', null, 'Getting started'), h('ul', null, steps.map(([t, d], i) => h('li', { class: d ? 'done' : i === now ? 'now' : '' }, (d ? '✓ ' : '') + t))), h('span', { class: 'muted' }, 'H hides these tips')); }
+  el.hidden = false;
 }
 
 // ── loop ────────────────────────────────────────────────────────────────────
@@ -257,8 +288,11 @@ function frame() {
       else if (fastT > 40 && qLevel !== 'high' && drops < 3 && T - lastDrop > 60) { applyQuality(qLevel === 'fast' ? 'balanced' : 'high'); slowT = fastT = 0; ema = 0.016; }
     }
   }
-  const sdt = sim.night ? dt * state.speed : dt;
-  sim.update(dt); crowd.update(sdt, T, !!sim.night);
+  // Pause really pauses: nothing runs behind the pause menu / title screen
+  const paused = mode === 'menu' || mode === 'pause', gdt = paused ? 0 : dt;
+  if (state.auto.on && !paused && !sim.night && $('#report').hidden) { autoT -= dt; if (autoT <= 0) { autoT = 8; if (sim.autoPrepare()) hudT = 0; } }
+  const sdt = sim.night ? gdt * state.speed : gdt;
+  sim.update(gdt); crowd.update(sdt, T, !!sim.night);
   player.update(dt);
   const f = ctx.uiFlags;
   f.camsActive = player.floor === 1 && player.x > 3 && player.z < 5.6; f.musicPlaying = audio.running;
