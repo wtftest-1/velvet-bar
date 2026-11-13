@@ -46,7 +46,7 @@ export class Player {
       if (turn) this.yaw -= turn * 1.9 * dt; if (pit) this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + pit * 1.4 * dt));
       const f = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0), s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
       const run = k.has('ShiftLeft') || k.has('ShiftRight'), sp = run ? 4.4 : 2.4;
-      let dx = -Math.sin(this.yaw) * f + Math.cos(this.yaw) * s, dz = -Math.cos(this.yaw) * f - Math.sin(this.yaw) * s;
+      let dx = -Math.sin(this.yaw) * f - Math.cos(this.yaw) * s, dz = -Math.cos(this.yaw) * f + Math.sin(this.yaw) * s; // strafe signs flipped: the world is mirrored
       const l = Math.hypot(dx, dz); if (l > 0) { dx /= l; dz /= l; }
       const a = Math.min(1, dt * 12); this.vx += (dx * sp - this.vx) * a; this.vz += (dz * sp - this.vz) * a;
     } else { this.vx = this.vz = 0; }
@@ -77,7 +77,7 @@ export class Player {
       if (turn) this.yaw -= turn * 1.9 * dt; if (pit) this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + pit * 1.4 * dt));
       const f = (k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0), s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
       const sp = k.has('ShiftLeft') || k.has('ShiftRight') ? 11 : 4.5;
-      dx = (-Math.sin(this.yaw) * f + Math.cos(this.yaw) * s) * sp; dz = (-Math.cos(this.yaw) * f - Math.sin(this.yaw) * s) * sp; dy = ((k.has('KeyE') ? 1 : 0) - (k.has('KeyQ') ? 1 : 0)) * sp * 0.7;
+      dx = (-Math.sin(this.yaw) * f - Math.cos(this.yaw) * s) * sp; dz = (-Math.cos(this.yaw) * f + Math.sin(this.yaw) * s) * sp; dy = ((k.has('KeyE') ? 1 : 0) - (k.has('KeyQ') ? 1 : 0)) * sp * 0.7;
     }
     this.x = Math.max(-33, Math.min(33, this.x + dx * dt)); this.z = Math.max(-30, Math.min(30, this.z + dz * dt)); this.flyY = Math.max(0.5, Math.min(14, this.flyY + dy * dt));
     this.floor = this.flyY > 3.2 ? 1 : 0; this.setCamera(this.flyY);
